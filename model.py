@@ -16,6 +16,7 @@ class Model(object):
 
     def build_graph(self):
         """ Builds the model in tensorflow """
+        # TODO:Tensorflow model goes here
 
         # Last step
         self._init_op = tf.global_variables_initializer()
@@ -32,3 +33,9 @@ class Model(object):
     def save_checkpoint(self):
         """ Saves the model to a file """
         self.saver.save(self._session, CKPT_PATH)
+
+    def train(self):
+        """ Trains the model on the dataset """
+
+        # Save model when done training
+        self.save_checkpoint()
