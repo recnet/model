@@ -1,16 +1,21 @@
 import tensorflow as tf
 import os.path
+import glob
 
-checkpoint_version = 0
-checkpoint_path = "checkpoints/model"+str(checkpoint_version)+".ckpt"
+checkpoint_path = "checkpoints/model.ckpt"
+test = tf.Variable(tf.zeros([200]), name="test")
+
 init_op = tf.global_variables_initializer()
 saver = tf.train.Saver()
 
 with tf.Session() as sess:
-    if os.path.isfile(checkpoint_path):
+    # Loads models if it exists
+    checkpoint_files = glob.glob(checkpoint_path + "*")
+    if all([os.path.isfile(file) for file in checkpoint_files]) and checkpoint_files:
         saver.restore(sess, checkpoint_path)
-        checkpoint_version = checkpoint_version + 1
+        print("Loaded model from: %s" % checkpoint_path)
     else:
+        print("No model found, initializing...")
         sess.run(init_op)
 
     # Do work ...
