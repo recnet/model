@@ -1,12 +1,16 @@
 import collections
 
-filename = input("Enter filename, words needs to be seperated with spaces > ")
-word_list = open(filename, 'r').read().split()
-print('Data size', len(word_list))
+def test_with_custom_file(filename):
+    word_list = open(filename, 'r').read().split()
+    print('Data size', len(word_list))
+    data, count, dictionary, reverse_dictionary = build_dataset(word_list)
 
-vocabulary_size = 50000
+    print(str(data))
+    print(str(dictionary))
+    print(str(reverse_dictionary))
 
-def build_dataset(words):
+def build_dataset(words, vocabulary_size = 50000):
+    count = [['UNK',-1]]
     count.extend(collections.Counter(words).most_common(vocabulary_size - 1))
     dictionary = dict()
     for word, _ in count:
@@ -24,8 +28,3 @@ def build_dataset(words):
     reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
     return data, count, dictionary, reverse_dictionary
 
-data, count, dictionary, reverse_dictionary = build_dataset(word_list)
-
-print(str(data))
-print(str(dictionary))
-print(str(reverse_dictionary))
