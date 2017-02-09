@@ -1,25 +1,34 @@
-import tensorflow as tf
-import os.path
 import glob
+import os.path
+import tensorflow as tf
 
-checkpoint_path = "checkpoints/model.ckpt"
-test = tf.Variable(tf.zeros([200]), name="test")
+CKPT_PATH = "checkpoints/model.ckpt"
 
-init_op = tf.global_variables_initializer()
-saver = tf.train.Saver()
+class Model(object):
+    """ A model representing our neural network """
+    def __init__(self, session):
+        self._session = session
+        self.vocabulary_size = 50000
+        self.embedding_size = 128
+        self.batch_size = 50
+        self.build_graph()
+        self.load_checkpoint()
 
-with tf.Session() as sess:
-    # Loads models if it exists
-    checkpoint_files = glob.glob(checkpoint_path + "*")
-    if all([os.path.isfile(file) for file in checkpoint_files]) and checkpoint_files:
-        saver.restore(sess, checkpoint_path)
-        print("Loaded model from: %s" % checkpoint_path)
-    else:
-        print("No model found, initializing...")
-        sess.run(init_op)
+    def build_graph(self):
+        """ Builds the model in tensorflow """
 
-    # Do work ...
+        # Last step
+        self._init_op = tf.global_variables_initializer()
+        self.saver = tf.train.Saver()
 
-    # Save model when done
-    save_path = saver.save(sess, checkpoint_path)
-    print("Model saved in: %s" % save_path)
+    def load_checkpoint(self):
+        """ Loads any exisiting trained model """
+        checkpoint_files = glob.glob(CKPT_PATH + "*")
+        if all([os.path.isfile(file) for file in checkpoint_files]) and checkpoint_files:
+            self.saver.restore(self._session, CKPT_PATH)
+        else:
+            self._session.run(self._init_op)
+
+    def save_checkpoint(self):
+        """ Saves the model to a file """
+        self.saver.save(self._session, CKPT_PATH)
