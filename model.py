@@ -16,7 +16,12 @@ class Model(object):
 
     def build_graph(self):
         """ Builds the model in tensorflow """
-        # TODO:Tensorflow model goes here
+
+        # Embedding matrix for the words
+        self._embedding_matrix = tf.Variable(
+            tf.random_uniform(
+                [self.vocabulary_size, self.embedding_size], -1.0, 1.0),
+            name="embeddings")
 
         # Last step
         self._init_op = tf.global_variables_initializer()
