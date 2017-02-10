@@ -2,7 +2,7 @@ import tensorflow as tf
 import csv
 
 def read(filePath, dataCols, labelCol):
-    with open(filePath, 'r') as csvfile:
+    with open(filePath, 'r', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
         dataFull = []
         labelFull = []
