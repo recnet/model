@@ -10,6 +10,7 @@ def read(filePath,dataCols,labelCols):
         for i in range(len(row)):
             col = row[i]
             for character in ['!','?','-','_','.',',','\'','\"',':',';']:
+                col = str(col);
                 col = col.replace(character, '')
             row[i] = col
         data[j] = row
