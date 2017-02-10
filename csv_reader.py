@@ -1,23 +1,27 @@
 import tensorflow as tf
-import pandas as pd
+import csv
 
-def read(filePath,dataCols,labelCols):
-    data = pd.read_csv(filePath, usecols = dataCols,header=None).values
-    labels = pd.read_csv(filePath, usecols = labelCols,header=None).values
+def read(filePath, dataCols, labelCol):
+    with open(filePath, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        dataFull = []
+        labelFull = []
+        for row in reader:
+            data = ""
+            label = row[labelCol]
+            for elem in dataCols:
+                col = row[elem]
+                for character in ['!','?','-','_','.',',','\'','\"',':',';']:
+                    col = str(col);
+                    col = col.replace(character, '')
+                if col:
+                    data += col + ", "
+            dataFull.append(data.strip(' ').strip(','))
+            labelFull.append(label)
+        return [dataFull,labelFull]
 
-    for j in range(len(data)):
-        row = data[j]
-        for i in range(len(row)):
-            col = row[i]
-            for character in ['!','?','-','_','.',',','\'','\"',':',';']:
-                col = str(col);
-                col = col.replace(character, '')
-            row[i] = col
-        data[j] = row
-    return [data,labels]
-
-# [data,labels] = read("../csv/processeddatalatest.csv",[0],[1])
-
+# [data, labels] = read("../data/training_data.csv",[0],1)
+#
 # for i in range(len(data)):
 #     print("Data: ", data[i])
 #     print("Label: ", labels[i])
