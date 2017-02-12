@@ -11,8 +11,8 @@ def read(filePath, dataCols, labelCol):
             label = row[labelCol]
             for elem in dataCols:
                 col = row[elem]
-                for character in ['!','?','-','_','.',',','\'','\"',':',';']:
-                    col = str(col);
+                for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';']:
+                    col = str(col)
                     col = col.replace(character, '')
                 if col:
                     data += col + ", "
