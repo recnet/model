@@ -1,24 +1,25 @@
-import tensorflow as tf
 import csv
 
-def read(filePath, dataCols, labelCol):
-    with open(filePath, 'r', encoding='utf-8') as csvfile:
+def read(file_path, data_column, label_column):
+    """ A function that reads the data and
+    corresponding label from a CSV file """
+    with open(file_path, 'r', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
-        dataFull = []
-        labelFull = []
+        data_full = []
+        label_full = []
         for row in reader:
             data = ""
-            label = row[labelCol]
-            for elem in dataCols:
+            label = row[label_column]
+            for elem in data_column:
                 col = row[elem]
                 for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';']:
                     col = str(col)
                     col = col.replace(character, '')
                 if col:
                     data += col + ", "
-            dataFull.append(data.strip(' ').strip(','))
-            labelFull.append(label)
-        return [dataFull,labelFull]
+            data_full.append(data.strip(' ').strip(','))
+            label_full.append(label)
+        return [data_full, label_full]
 
 # [data, labels] = read("../data/training_data.csv",[0],1)
 #
