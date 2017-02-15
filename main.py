@@ -49,17 +49,23 @@ bias = tf.Variable(tf.random_normal([userCount], stddev=0.35, dtype=tf.float64),
 
 logits = tf.matmul(output, weights) + bias
 prediction = tf.nn.softmax(logits)
-print('prediction ', prediction)
+sess = tf.InteractiveSession()
+sess.run(tf.global_variables_initializer())
+sentence = ['Hej', 'katt', 'hund']
+indexIn = getIndices(sentence, dictionary)
+p = sess.run(prediction, feed_dict = {input: [indexIn]})
+print('Prediction before p', p)
+
 error = tf.nn.softmax_cross_entropy_with_logits(labels=target, logits=logits)
 cross_entropy = tf.reduce_mean(error)
 train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
-#Todo just create some inputvars for lstm and run, see what input it looks and shape of output, glhf Maxim.
-
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    sentence = ['Hej', 'katt', 'hund']
-    indexIn = getIndices(sentence, dictionary)
-    sess.run(train_step, feed_dict = {input: [indexIn], target: [[1, 0, 0, 0, 0, 0]]})
+sentence = ['Hej', 'katt', 'hund']
+indexIn = getIndices(sentence, dictionary)
+sess.run(train_step, feed_dict = {input: [indexIn], target: [[1, 0, 0, 0, 0, 0]]})
 
 print('not sure if works or not')
+sentence = ['Hej', 'katt', 'hund']
+indexIn = getIndices(sentence, dictionary)
+p = sess.run(prediction, feed_dict = {input: [indexIn]})
+print('Prediction before p', p)
