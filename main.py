@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import word2vec
 
 def getVec(word, dictionary):
     idx = dictionary[word]
@@ -24,12 +25,12 @@ unroll_steps = 3
 feature_size = 4 #this will basically be size of dictionary because its one hot vec, 50000 ish
 batch_size = 1
 onehotvecsize = 2 #testing purposes, look my dictionary variable below
-userCount = 2 #change to 13000 later????
-
+userCount = 6 #change to 13000 later????
 # sess = tf.InteractiveSession()
 
 #Todo call function for word2vec and assign it to the variable
-dictionary = {"a": '1', "c": '2', "z": '3'} #this will be my dictionary that I will somehow create by calling func from word2vec
+vocabulary = ["Hej", "po", "dig", "katt", "hund"]
+_, _, dictionary, _ = word2vec.build_dataset(vocabulary) #this will be my dictionary that I will somehow create by calling func from word2vec
 matrix = createMatrix(dictionary)
 embeddingMatrix = tf.constant(matrix)#I should be able to give it numpy object to create embedding matrix
 input = tf.placeholder(tf.int32, [1, unroll_steps]) #I want to have input as 1 row of 30 word indices so I can give it to my embedding matrix
@@ -47,8 +48,8 @@ weights = tf.Variable(tf.random_normal([feature_size, userCount], stddev=0.35, d
 bias = tf.Variable(tf.random_normal([userCount], stddev=0.35, dtype=tf.float64), name="biases") #1 bias for the 1 layer that I will have
 
 logits = tf.matmul(output, weights) + bias
-print('shape of logits ', logits.get_shape())
-
+prediction = tf.nn.softmax(logits)
+print('prediction ', prediction)
 error = tf.nn.softmax_cross_entropy_with_logits(labels=target, logits=logits)
 cross_entropy = tf.reduce_mean(error)
 train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
@@ -57,7 +58,8 @@ train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    #Add a for loop later on that iterates through the data, then map indexes for users to fancy vector
-    sess.run(train_step, feed_dict = {input: [[1, 2, 3]], target: [[1, 1]]})
+    sentence = ['Hej', 'katt', 'hund']
+    indexIn = getIndices(sentence, dictionary)
+    sess.run(train_step, feed_dict = {input: [indexIn], target: [[1, 0, 0, 0, 0, 0]]})
 
 print('not sure if works or not')
