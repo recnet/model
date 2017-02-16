@@ -124,7 +124,6 @@ class Model(object):
 
         _, _, dict, rev_dict = helper.build_dataset(vocab)
 
-        users = users.split()
         _, _, users_dict, rev_users_dict = helper.build_dataset(users)
 
         self.user_count = len(users_dict)
