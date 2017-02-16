@@ -123,7 +123,7 @@ class Model(object):
 
     def train(self):
         """ Trains the model on the dataset """
-        data, labels = csv_reader.read("./data/training_data.csv", [0], 1)
+        data, labels = csv_reader.read("./data/testing_data.csv", [0], 1)
 
         vocab = " ".join(data).split() #kanske
         users = " ".join(labels).split()
@@ -134,7 +134,7 @@ class Model(object):
 
         for i, sentence in enumerate(data):
             label = labels[i]
-            sentence_vec = helper.getIndices(sentence, dict, self.max_title_length)
+            sentence_vec = helper.getIndices(sentence, word_dict, self.max_title_length)
             label_vec = helper.label_vector(label.split(), users_dict, self.user_count)
 
             self._session.run(self.train_op,
