@@ -73,9 +73,9 @@ def getIndices(sentence, dictionary): #This assumes we have preprocessed the fil
     wordC = 0
     maxC = 30
     for word in sentence:
-        if word > maxC:
+        if wordC > maxC:
             return result
-        word += 1
+        wordC += 1
         if word in dictionary:
             result.append(dictionary[word])
         else:

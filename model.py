@@ -54,7 +54,7 @@ class Model(object):
 
         # Placeholders for input and output
         self._input = tf.placeholder(tf.int32, [1, self.max_title_length])
-        self._target = tf.placeholder(tf.int32, [1, self.user_count])
+        self._target = tf.placeholder(tf.int32, [1, None])
 
         # This is the first, and input, layer of our network
         self.lstm_layer = tf.nn.rnn_cell.LSTMCell(self.max_title_length,
