@@ -22,6 +22,7 @@
 # SOFTWARE.
 #==============================================================================
 import collections
+import numpy as np
 
 def test_with_custom_file(filename):
     """ Tests the build_dataset function """
@@ -54,3 +55,24 @@ def build_dataset(words, vocabulary_size=50000):
     reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
     return data, count, dictionary, reverse_dictionary
 
+def getVec(word, dictionary):
+    idx = dictionary[word]
+    totLen = len(dictionary)
+    vec = np.zeros(totLen)
+    vec[idx] = 1
+    return vec
+
+def createMatrix(dictionary):
+    totLen = len(dictionary)
+    matrix = np.identity(totLen)
+    matrix[0][0] = 0 #this will be kinda "default vec" for 'UNK'
+    return matrix
+
+def getIndices(sentence, dictionary): #This assumes we have preprocessed the file
+    result = []
+    for word in sentence:
+        if word in dictionary:
+            result.append(dictionary[word])
+        else:
+            result.append(0) #The index of default vec.
+    return result

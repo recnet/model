@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import word2vec
+import helper
 
 def getVec(word, dictionary):
     idx = dictionary[word]
@@ -30,7 +30,7 @@ userCount = 6 #change to 13000 later????
 
 #Todo call function for word2vec and assign it to the variable
 vocabulary = ["Hej", "po", "dig", "katt", "hund"]
-_, _, dictionary, _ = word2vec.build_dataset(vocabulary) #this will be my dictionary that I will somehow create by calling func from word2vec
+_, _, dictionary, _ = helper.build_dataset(vocabulary) #this will be my dictionary that I will somehow create by calling func from word2vec
 matrix = createMatrix(dictionary)
 embeddingMatrix = tf.constant(matrix)#I should be able to give it numpy object to create embedding matrix
 input = tf.placeholder(tf.int32, [1, unroll_steps]) #I want to have input as 1 row of 30 word indices so I can give it to my embedding matrix
