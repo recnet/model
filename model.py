@@ -30,6 +30,8 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
+import csv_reader
+import helper
 
 CKPT_PATH = "checkpoints/model.ckpt"
 
@@ -43,6 +45,7 @@ class Model(object):
         self.lstm_neurons = 500
         self.user_count = 100
         self.batch_size = 50
+        self.cost = 40 #Don't know what this should be initialised as
         self.build_graph()
         self.load_checkpoint()
 
@@ -59,7 +62,7 @@ class Model(object):
         # Embedding matrix for the words
         self._embedding_matrix = tf.Variable(
             tf.random_uniform(
-                [self.vocabulary_size, self.embedding_size], -1.0, 1.0),
+                [self.vocabulary_size, self.embedding_size], -1.0, 1.0, dtype=tf.float64),
             name="embeddings")
         embedded_input = tf.nn.embedding_lookup(self._embedding_matrix,
                                                 self._input)
@@ -67,8 +70,12 @@ class Model(object):
                                     axis=1)
 
         # Run the LSTM layer with the embedded input
+
         initial_state = self.lstm_layer.zero_state(self.batch_size,
                                                    dtype=tf.float64)
+        print("Layer shape: ", self.lstm_layer)
+        print("embeded input: ", embedded_input)
+        print("init state: ", initial_state)
         outputs, state = tf.nn.rnn(self.lstm_layer, embedded_input,
                                    initial_state=initial_state)
         self.lstm_final_state = state
@@ -86,8 +93,14 @@ class Model(object):
                                                          dtype=tf.float64),
                                         name="biases")
 
-        self.softmax = tf.nn.softmax(tf.matmul(output, self.softmax_weights) +
-                                     self.softmax_bias)
+        logits = tf.matmul(output, self.softmax_weights) + self.softmax_bias
+        self.softmax = tf.nn.softmax(logits)
+
+
+        error = tf.nn.softmax_cross_entropy_with_logits(labels=self._target, logits=logits)
+        cross_entropy = tf.reduce_mean(error)
+        self.train_op = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+
         # Last step
         self._init_op = tf.global_variables_initializer()
         self.saver = tf.train.Saver()
@@ -106,6 +119,51 @@ class Model(object):
 
     def train(self):
         """ Trains the model on the dataset """
+        data, labels = csv_reader.reader("../data/training_data.csv", [0], 1)
+
+        vocab = " ".join(data)
+        users = " ".join(labels)
+
+        _, _, dict, rev_dict = helper.build_dataset(vocab)
+        _, _, users_dict, rev_users_dict = helper.build_dataset(users)
+
+
+
+        for i, sentence in enumerate(data):
+            label = labels[i]
+
+            sentence_vec = helper.getIndices(sentence, dict)
+            label_vec = helper.label_vector(label.split())
+
+            self._session.run(self.train_op,
+                              {self._input: [sentence_vec],
+                                self._target: [label_vec]})
+            print("hej")
+
+        # state = self.session.run(self.initial_state)
+        #
+        # fetches = {
+        #    "cost": self.cost,
+        #    "final_state": self.lstm_final_state
+        # }
+        # #Not sure if this will be needed.
+        #
+        # for step in range(self.batch_size): #Not sure if batch size
+        #     feed_dict = {}
+        #
+        #     for i, (c, h) in enumerate(self.initial_state):
+        #         feed_dict[c] = state[i].c
+        #         feed_dict[h] = state[i].h
+        #
+        #     vals = self.session.run(fetches, feed_dict)
+        #
 
         # Save model when done training
         self.save_checkpoint()
+
+def main():
+    model = Model(tf.InteractiveSession())
+    model.train()
+
+if(__name__=="__main__"):
+    main()
