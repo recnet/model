@@ -46,7 +46,6 @@ class Model(object):
         self.lstm_neurons = 500
         self.user_count = 13000
         self.batch_size = 1
-        self.cost = 40 #Don't know what this should be initialised as
         self.build_graph()
         self.load_checkpoint()
 
