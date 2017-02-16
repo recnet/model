@@ -44,7 +44,7 @@ class Model(object):
         self.embedding_size = 128
         self.max_title_length = 30
         self.lstm_neurons = 500
-        self.user_count = 11377
+        self.user_count = 13000
         self.batch_size = 1
         self.cost = 40 #Don't know what this should be initialised as
         self.build_graph()
@@ -132,12 +132,10 @@ class Model(object):
 
         _, _, users_dict, rev_users_dict = helper.build_dataset(users)
 
-        self.user_count = len(users_dict)
-
         for i, sentence in enumerate(data):
             label = labels[i]
-            sentence_vec = helper.getIndices(sentence, word_dict, 30)
-            label_vec = helper.label_vector(label.split(), users_dict)
+            sentence_vec = helper.getIndices(sentence, dict, self.max_title_length)
+            label_vec = helper.label_vector(label.split(), users_dict, self.user_count)
 
             self._session.run(self.train_op,
                               {self._input: [sentence_vec],
