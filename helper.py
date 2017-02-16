@@ -76,3 +76,10 @@ def getIndices(sentence, dictionary): #This assumes we have preprocessed the fil
         else:
             result.append(0) #The index of default vec.
     return result
+
+def label_vector(users, dic):
+
+    vector = [0]*len(dic)
+    for user in users:
+        vector[dic[user]] = 1
+    return vector
