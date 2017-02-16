@@ -49,7 +49,25 @@ class Model(object):
         self.user_count = 13000
         self.batch_size = 1
         self.build_graph()
+        self.build_data()
         self.load_checkpoint()
+
+    def build_data(self):
+        self.train_data, self.train_labels = \
+            csv_reader.read("./data/training_data.csv", [0], 1)
+
+        self.valid_data, self.valid_labels = \
+            csv_reader.read("./data/validation_data.csv", [0], 1)
+
+        self.test_data, self.test_labels = \
+            csv_reader.read("./data/testing_data.csv", [0], 1)
+
+        vocab = " ".join(self.train_data).split()
+        users = " ".join(self.train_labels).split()
+
+        _, _, self.word_dict, self.rev_dict = helper.build_dataset(vocab)
+
+        _, _, self.users_dict, self.rev_users_dict = helper.build_dataset(users)
 
     def build_graph(self):
         """ Builds the model in tensorflow """
@@ -122,49 +140,50 @@ class Model(object):
         """ Saves the model to a file """
         self.saver.save(self._session, CKPT_PATH)
 
+    def validate(self):
+        """ Validates the model """
+        errors = 0
+        for i, sentence in enumerate(self.valid_data):
+            if i > 10000:
+                break
+            label = self.valid_labels[i]
+            sentence_vec = helper.get_indicies(sentence, self.word_dict, self.max_title_length)
+            label_vec = helper.label_vector(label.split(), self.users_dict, self.user_count)
+
+            res = self._session.run(self.softmax,
+                                    {self._input: [sentence_vec],
+                                     self._target: [label_vec]})
+            ind = np.argmax(res[0])
+            val = res[0][ind]
+            lab = label_vec[ind]
+
+            if lab == 0:
+                errors += 1
+
+            if i % 100 == 0 and i > 0:
+                print("Error rate: ", errors/i)
+        
+        print("Errors: ", errors)
+        print("Final error rate: ", errors/10000)
+    
     def train(self):
         """ Trains the model on the dataset """
-        data, labels = csv_reader.read("./data/training_data.csv", [0], 1)
-
-        vocab = " ".join(data).split() #kanske
-        users = " ".join(labels).split()
-
-        _, _, word_dict, rev_dict = helper.build_dataset(vocab)
-
-        _, _, users_dict, rev_users_dict = helper.build_dataset(users)
-
-        for i, sentence in enumerate(data):
-            label = labels[i]
-            sentence_vec = helper.get_indicies(sentence, word_dict, self.max_title_length)
-            label_vec = helper.label_vector(label.split(), users_dict, self.user_count)
+        for i, sentence in enumerate(self.train_data):
+            if i > 10000:
+                break
+            label = self.train_labels[i]
+            sentence_vec = helper.get_indicies(sentence, self.word_dict, self.max_title_length)
+            label_vec = helper.label_vector(label.split(), self.users_dict, self.user_count)
 
             self._session.run(self.train_op,
                               {self._input: [sentence_vec],
                                self._target: [label_vec]})
             # Debug print out
-            if i % 500:
+            if i % 100 == 0 and i > 0:
                 print('Training... ', \
                       self._session.run(self.error,
                                         {self._input: [sentence_vec],
                                          self._target: [label_vec]}))
-
-            if i % 5000:
-                print("Random test:")
-                res = self._session.run(self.softmax,
-                                        {self._input: [sentence_vec],
-                                         self._target: [label_vec]})
-                #print(res)
-                #print(label_vec)
-                ind = np.argmax(res[0])
-                val = res[0][ind]
-                lab = label_vec[ind]
-                print("Index: ", ind)
-                print("Value: ", val)
-                print("Label: ", lab)
-                print("User: ", rev_users_dict[ind])
-                time.sleep(10)
-            
-
         # Save model when done training
         self.save_checkpoint()
 
@@ -172,6 +191,7 @@ def main():
     """ A main method that creates the model and starts training it """
     model = Model(tf.InteractiveSession())
     model.train()
+    model.validate()
 
 if __name__ == "__main__":
     main()
