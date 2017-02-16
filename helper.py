@@ -68,29 +68,20 @@ def createMatrix(dictionary):
     matrix[0][0] = 0 #this will be kinda "default vec" for 'UNK'
     return matrix
 
-def getIndices(sentence, dictionary): #This assumes we have preprocessed the file
-    result = []
-    wordC = 0
-    maxC = 30
-    for word in sentence:
-        if wordC > maxC:
+def getIndices(sentence, dictionary, maxWord): #This assumes we have preprocessed the file
+    result = [0] * maxWord
+    for i, word in enumerate(sentence):
+        if i > maxWord-1:
             return result
-        wordC += 1
         if word in dictionary:
-            result.append(dictionary[word])
+            result[i] = dictionary[word]
         else:
-            result.append(0) #The index of default vec.
-
-    for _ in range(maxC-wordC):
-        result.append(0)  # The index of default vec, pad with zeros since the title is too short. Check if we should pad in the beginning.
+            result[i] = 0
     return result
 
 def label_vector(users, dic):
-
     vector = [0]*len(dic)
     for user in users:
         if user in dic:
             vector[dic[user]] = 1
-        else:
-            print("Lol")
     return vector
