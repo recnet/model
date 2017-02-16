@@ -55,23 +55,19 @@ def build_dataset(words, vocabulary_size=50000):
     reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
     return data, count, dictionary, reverse_dictionary
 
-def getVec(word, dictionary):
-    idx = dictionary[word]
-    totLen = len(dictionary)
-    vec = np.zeros(totLen)
-    vec[idx] = 1
-    return vec
-
-def createMatrix(dictionary):
-    totLen = len(dictionary)
-    matrix = np.identity(totLen)
+def create_matrix(dictionary):
+    """ Creates an identity matrix with size of dictionary """
+    to_len = len(dictionary)
+    matrix = np.identity(to_len)
     matrix[0][0] = 0 #this will be kinda "default vec" for 'UNK'
     return matrix
 
-def getIndices(sentence, dictionary, maxWord): #This assumes we have preprocessed the file
-    result = [0] * maxWord
+def get_indicies(sentence, dictionary, max_words):
+    """ Turns a sentence into a vector of word IDs """
+    # This assumes that the sentence is pre-processed as an array of words
+    result = [0] * max_words
     for i, word in enumerate(sentence):
-        if i > maxWord-1:
+        if i > max_words-1:
             return result
         if word in dictionary:
             result[i] = dictionary[word]
@@ -79,8 +75,10 @@ def getIndices(sentence, dictionary, maxWord): #This assumes we have preprocesse
             result[i] = 0
     return result
 
-def label_vector(users, dic, maxUsers):
-    vector = [0]*maxUsers
+def label_vector(users, dic, max_users):
+    """ Turns an array of some users into an array
+    with ones on those users indicies """
+    vector = [0]*max_users
     for user in users:
         if user in dic:
             vector[dic[user]] = 1
