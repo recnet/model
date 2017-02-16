@@ -89,5 +89,8 @@ def label_vector(users, dic):
 
     vector = [0]*len(dic)
     for user in users:
-        vector[dic[user]] = 1
+        if user in dic:
+            vector[dic[user]] = 1
+        else:
+            print("Lol")
     return vector

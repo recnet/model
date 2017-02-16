@@ -44,7 +44,7 @@ class Model(object):
         self.max_title_length = 30
         self.lstm_neurons = 500
         self.user_count = 100
-        self.batch_size = 50
+        self.batch_size = 1
         self.cost = 40 #Don't know what this should be initialised as
         self.build_graph()
         self.load_checkpoint()
@@ -73,16 +73,14 @@ class Model(object):
 
         initial_state = self.lstm_layer.zero_state(self.batch_size,
                                                    dtype=tf.float64)
-        print("Layer shape: ", self.lstm_layer)
-        print("embeded input: ", embedded_input)
-        print("init state: ", initial_state)
+
         outputs, state = tf.nn.rnn(self.lstm_layer, embedded_input,
                                    initial_state=initial_state)
         self.lstm_final_state = state
-        output = tf.reshape(tf.concat_v2(outputs, 1), [-1, self.lstm_neurons])
-
+        #output = tf.reshape(tf.concat_v2(outputs, 1), [-1, self.lstm_neurons])
+        output = outputs[-1]
         # Feed the output of the LSTM layer to a softmax layer
-        self.softmax_weights = tf.Variable(tf.random_normal([self.lstm_neurons,
+        self.softmax_weights = tf.Variable(tf.random_normal([self.max_title_length,
                                                              self.user_count],
                                                             stddev=0.35,
                                                             dtype=tf.float64),
@@ -119,7 +117,7 @@ class Model(object):
 
     def train(self):
         """ Trains the model on the dataset """
-        data, labels = csv_reader.reader("../data/training_data.csv", [0], 1)
+        data, labels = csv_reader.read("../data/training_data.csv", [0], 1)
 
         vocab = " ".join(data)
         users = " ".join(labels)
@@ -127,13 +125,13 @@ class Model(object):
         _, _, dict, rev_dict = helper.build_dataset(vocab)
         _, _, users_dict, rev_users_dict = helper.build_dataset(users)
 
-
+        self.user_count = len(users_dict)
 
         for i, sentence in enumerate(data):
             label = labels[i]
 
             sentence_vec = helper.getIndices(sentence, dict)
-            label_vec = helper.label_vector(label.split())
+            label_vec = helper.label_vector(label.split(), users_dict)
 
             self._session.run(self.train_op,
                               {self._input: [sentence_vec],
