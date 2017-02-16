@@ -43,7 +43,7 @@ class Model(object):
         self.embedding_size = 128
         self.max_title_length = 30
         self.lstm_neurons = 500
-        self.user_count = 100
+        self.user_count = 11377
         self.batch_size = 1
         self.cost = 40 #Don't know what this should be initialised as
         self.build_graph()
@@ -98,7 +98,7 @@ class Model(object):
         error = tf.nn.softmax_cross_entropy_with_logits(labels=self._target, logits=logits)
         cross_entropy = tf.reduce_mean(error)
         self.train_op = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-
+        self.error = cross_entropy
         # Last step
         self._init_op = tf.global_variables_initializer()
         self.saver = tf.train.Saver()
@@ -117,27 +117,29 @@ class Model(object):
 
     def train(self):
         """ Trains the model on the dataset """
-        data, labels = csv_reader.read("../data/training_data.csv", [0], 1)
+        data, labels = csv_reader.read("testing_data.csv", [0], 1)
 
         vocab = " ".join(data).split() #kanske
         users = " ".join(labels).split()
 
         _, _, dict, rev_dict = helper.build_dataset(vocab)
-        _, count, users_dict, rev_users_dict = helper.build_dataset(users)
+
+        users = users.split()
+        _, _, users_dict, rev_users_dict = helper.build_dataset(users)
 
         self.user_count = len(users_dict)
 
         for i, sentence in enumerate(data):
             label = labels[i]
-
-            sentence_vec = helper.getIndices(sentence, dict)
+            sentence_vec = helper.getIndices(sentence, dict, 30)
             label_vec = helper.label_vector(label.split(), users_dict)
 
             self._session.run(self.train_op,
                               {self._input: [sentence_vec],
                                 self._target: [label_vec]})
-            print("hej")
-
+            if i % 500:
+                print('hej ', self._session.run(self.error, {self._input: [sentence_vec],
+                                self._target: [label_vec]}))
         # state = self.session.run(self.initial_state)
         #
         # fetches = {
