@@ -40,6 +40,7 @@ class Model(object):
     def __init__(self, session):
         self._session = session
         self.vocabulary_size = 50000
+        self.learning_rate = 0.5
         self.embedding_size = 128
         self.max_title_length = 30
         self.lstm_neurons = 500
@@ -62,7 +63,8 @@ class Model(object):
         # Embedding matrix for the words
         self._embedding_matrix = tf.Variable(
             tf.random_uniform(
-                [self.vocabulary_size, self.embedding_size], -1.0, 1.0, dtype=tf.float64),
+                [self.vocabulary_size, self.embedding_size],
+                -1.0, 1.0, dtype=tf.float64),
             name="embeddings")
         embedded_input = tf.nn.embedding_lookup(self._embedding_matrix,
                                                 self._input)
@@ -80,10 +82,10 @@ class Model(object):
         #output = tf.reshape(tf.concat_v2(outputs, 1), [-1, self.lstm_neurons])
         output = outputs[-1]
         # Feed the output of the LSTM layer to a softmax layer
-        self.softmax_weights = tf.Variable(tf.random_normal([self.max_title_length,
-                                                             self.user_count],
-                                                            stddev=0.35,
-                                                            dtype=tf.float64),
+        self.softmax_weights = tf.Variable(tf.random_normal(
+            [self.max_title_length, self.user_count],
+            stddev=0.35,
+            dtype=tf.float64),
                                            name="weights")
 
         self.softmax_bias = tf.Variable(tf.random_normal([self.user_count],
@@ -94,11 +96,14 @@ class Model(object):
         logits = tf.matmul(output, self.softmax_weights) + self.softmax_bias
         self.softmax = tf.nn.softmax(logits)
 
-
-        error = tf.nn.softmax_cross_entropy_with_logits(labels=self._target, logits=logits)
+        # Defne error function
+        error = tf.nn.softmax_cross_entropy_with_logits(labels=self._target,
+                                                        logits=logits)
         cross_entropy = tf.reduce_mean(error)
-        self.train_op = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+        self.train_op = tf.train.GradientDescentOptimizer(
+            self.learning_rate).minimize(cross_entropy)
         self.error = cross_entropy
+
         # Last step
         self._init_op = tf.global_variables_initializer()
         self.saver = tf.train.Saver()
@@ -106,7 +111,8 @@ class Model(object):
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
         checkpoint_files = glob.glob(CKPT_PATH + "*")
-        if all([os.path.isfile(file) for file in checkpoint_files]) and checkpoint_files:
+        if all([os.path.isfile(file) for file in checkpoint_files]) \
+           and checkpoint_files:
             self.saver.restore(self._session, CKPT_PATH)
         else:
             self._session.run(self._init_op)
@@ -117,12 +123,12 @@ class Model(object):
 
     def train(self):
         """ Trains the model on the dataset """
-        data, labels = csv_reader.read("testing_data.csv", [0], 1)
+        data, labels = csv_reader.read("./data/training_data.csv", [0], 1)
 
         vocab = " ".join(data).split() #kanske
         users = " ".join(labels).split()
 
-        _, _, dict, rev_dict = helper.build_dataset(vocab)
+        _, _, word_dict, rev_dict = helper.build_dataset(vocab)
 
         _, _, users_dict, rev_users_dict = helper.build_dataset(users)
 
@@ -130,15 +136,18 @@ class Model(object):
 
         for i, sentence in enumerate(data):
             label = labels[i]
-            sentence_vec = helper.getIndices(sentence, dict, 30)
+            sentence_vec = helper.getIndices(sentence, word_dict, 30)
             label_vec = helper.label_vector(label.split(), users_dict)
 
             self._session.run(self.train_op,
                               {self._input: [sentence_vec],
-                                self._target: [label_vec]})
+                               self._target: [label_vec]})
+            # Debug print out
             if i % 500:
-                print('hej ', self._session.run(self.error, {self._input: [sentence_vec],
-                                self._target: [label_vec]}))
+                print('Training... ', \
+                      self._session.run(self.error,
+                                        {self._input: [sentence_vec],
+                                         self._target: [label_vec]}))
         # state = self.session.run(self.initial_state)
         #
         # fetches = {
@@ -161,8 +170,9 @@ class Model(object):
         self.save_checkpoint()
 
 def main():
+    """ A main method that creates the model and starts training it """
     model = Model(tf.InteractiveSession())
     model.train()
 
-if(__name__=="__main__"):
+if __name__ == "__main__":
     main()
