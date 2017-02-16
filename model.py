@@ -32,6 +32,8 @@ import os.path
 import tensorflow as tf
 import csv_reader
 import helper
+import time
+import numpy as np
 
 CKPT_PATH = "checkpoints/model.ckpt"
 
@@ -122,7 +124,7 @@ class Model(object):
 
     def train(self):
         """ Trains the model on the dataset """
-        data, labels = csv_reader.read("./data/testing_data.csv", [0], 1)
+        data, labels = csv_reader.read("./data/training_data.csv", [0], 1)
 
         vocab = " ".join(data).split() #kanske
         users = " ".join(labels).split()
@@ -145,6 +147,24 @@ class Model(object):
                       self._session.run(self.error,
                                         {self._input: [sentence_vec],
                                          self._target: [label_vec]}))
+
+            if i % 5000:
+                print("Random test:")
+                res = self._session.run(self.softmax,
+                                        {self._input: [sentence_vec],
+                                         self._target: [label_vec]})
+                #print(res)
+                #print(label_vec)
+                ind = np.argmax(res[0])
+                val = res[0][ind]
+                lab = label_vec[ind]
+                print("Index: ", ind)
+                print("Value: ", val)
+                print("Label: ", lab)
+                print("User: ", rev_users_dict[ind])
+                time.sleep(10)
+            
+
         # Save model when done training
         self.save_checkpoint()
 
