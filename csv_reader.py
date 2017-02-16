@@ -40,12 +40,13 @@ def read(file_path, data_column, label_column):
                     col = col.replace(character, '')
                 if col:
                     data += col + ", "
+            label = label.replace(',', '')
             data_full.append(data.strip(' ').strip(','))
             label_full.append(label)
         return [data_full, label_full]
 
-# [data, labels] = read("../data/training_data.csv",[0],1)
-#
-# for i in range(len(data)):
-#     print("Data: ", data[i])
-#     print("Label: ", labels[i])
+[data, labels] = read("../data/training_data.csv",[0],1)
+
+for i in range(len(data)):
+     print("Data: ", data[i])
+     print("Label: ", labels[i])
