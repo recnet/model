@@ -79,8 +79,8 @@ def getIndices(sentence, dictionary, maxWord): #This assumes we have preprocesse
             result[i] = 0
     return result
 
-def label_vector(users, dic):
-    vector = [0]*len(dic)
+def label_vector(users, dic, maxUsers):
+    vector = [0]*maxUsers
     for user in users:
         if user in dic:
             vector[dic[user]] = 1
