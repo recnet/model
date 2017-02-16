@@ -119,11 +119,11 @@ class Model(object):
         """ Trains the model on the dataset """
         data, labels = csv_reader.read("../data/training_data.csv", [0], 1)
 
-        vocab = " ".join(data)
-        users = " ".join(labels)
+        vocab = " ".join(data).split() #kanske
+        users = " ".join(labels).split()
 
         _, _, dict, rev_dict = helper.build_dataset(vocab)
-        _, _, users_dict, rev_users_dict = helper.build_dataset(users)
+        _, count, users_dict, rev_users_dict = helper.build_dataset(users)
 
         self.user_count = len(users_dict)
 
