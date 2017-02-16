@@ -133,7 +133,7 @@ class Model(object):
 
         for i, sentence in enumerate(data):
             label = labels[i]
-            sentence_vec = helper.getIndices(sentence, word_dict, self.max_title_length)
+            sentence_vec = helper.get_indicies(sentence, word_dict, self.max_title_length)
             label_vec = helper.label_vector(label.split(), users_dict, self.user_count)
 
             self._session.run(self.train_op,
@@ -145,7 +145,6 @@ class Model(object):
                       self._session.run(self.error,
                                         {self._input: [sentence_vec],
                                          self._target: [label_vec]}))
-        
         # Save model when done training
         self.save_checkpoint()
 
