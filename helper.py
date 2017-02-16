@@ -70,11 +70,19 @@ def createMatrix(dictionary):
 
 def getIndices(sentence, dictionary): #This assumes we have preprocessed the file
     result = []
+    wordC = 0
+    maxC = 30
     for word in sentence:
+        if word > maxC:
+            return result
+        word += 1
         if word in dictionary:
             result.append(dictionary[word])
         else:
             result.append(0) #The index of default vec.
+
+    for _ in range(maxC-wordC):
+        result.append(0)  # The index of default vec, pad with zeros since the title is too short. Check if we should pad in the beginning.
     return result
 
 def label_vector(users, dic):
