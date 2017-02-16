@@ -146,24 +146,7 @@ class Model(object):
                       self._session.run(self.error,
                                         {self._input: [sentence_vec],
                                          self._target: [label_vec]}))
-        # state = self.session.run(self.initial_state)
-        #
-        # fetches = {
-        #    "cost": self.cost,
-        #    "final_state": self.lstm_final_state
-        # }
-        # #Not sure if this will be needed.
-        #
-        # for step in range(self.batch_size): #Not sure if batch size
-        #     feed_dict = {}
-        #
-        #     for i, (c, h) in enumerate(self.initial_state):
-        #         feed_dict[c] = state[i].c
-        #         feed_dict[h] = state[i].h
-        #
-        #     vals = self.session.run(fetches, feed_dict)
-        #
-
+        
         # Save model when done training
         self.save_checkpoint()
 
