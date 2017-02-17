@@ -30,9 +30,9 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-import csv_reader
 import helper
 import numpy as np
+import data
 
 CKPT_PATH = "checkpoints/model.ckpt"
 
@@ -48,30 +48,8 @@ class Model(object):
         self.user_count = 13000
         self.batch_size = 1
         self.build_graph()
-        self.build_data()
+        self.data = data.Data(verbose=True)
         self.load_checkpoint()
-
-    def build_data(self):
-        """ Reads and builds the dataset """
-        print("Reading training data...")
-        self.train_data, self.train_labels = \
-            csv_reader.read("./data/training_data.csv", [0], 1)
-
-        print("Reading validation data...")
-        self.valid_data, self.valid_labels = \
-            csv_reader.read("./data/validation_data.csv", [0], 1)
-
-        print("Reading testing data...")
-        self.test_data, self.test_labels = \
-            csv_reader.read("./data/testing_data.csv", [0], 1)
-
-        vocab = " ".join(self.train_data).split()
-        users = " ".join(self.train_labels).split()
-
-        print("Building dictionaries...")
-        _, _, self.word_dict, self.rev_dict = helper.build_dataset(vocab)
-
-        _, _, self.users_dict, self.rev_users_dict = helper.build_dataset(users)
 
     def build_graph(self):
         """ Builds the model in tensorflow """
@@ -148,10 +126,10 @@ class Model(object):
         """ Validates the model """
         print("Starting validation...")
         errors = 0
-        for i, sentence in enumerate(self.valid_data):
-            label = self.valid_labels[i]
-            sentence_vec = helper.get_indicies(sentence, self.word_dict, self.max_title_length)
-            label_vec = helper.label_vector(label.split(), self.users_dict, self.user_count)
+        for i, sentence in enumerate(self.data.valid_data):
+            label = self.data.valid_labels[i]
+            sentence_vec = helper.get_indicies(sentence, self.data.word_dict, self.max_title_length)
+            label_vec = helper.label_vector(label.split(), self.data.users_dict, self.user_count)
 
             res = self._session.run(self.softmax,
                                     {self._input: [sentence_vec],
@@ -167,15 +145,15 @@ class Model(object):
                 print("Error rate: ", errors/i)
 
         print("Errors: ", errors)
-        print("Final error rate: ", errors/len(self.valid_data))
+        print("Final error rate: ", errors/len(self.data.valid_data))
 
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-        for i, sentence in enumerate(self.train_data):
-            label = self.train_labels[i]
-            sentence_vec = helper.get_indicies(sentence, self.word_dict, self.max_title_length)
-            label_vec = helper.label_vector(label.split(), self.users_dict, self.user_count)
+        for i, sentence in enumerate(self.data.train_data):
+            label = self.data.train_labels[i]
+            sentence_vec = helper.get_indicies(sentence, self.data.word_dict, self.max_title_length)
+            label_vec = helper.label_vector(label.split(), self.data.users_dict, self.user_count)
 
             self._session.run(self.train_op,
                               {self._input: [sentence_vec],
