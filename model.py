@@ -53,18 +53,23 @@ class Model(object):
         self.load_checkpoint()
 
     def build_data(self):
+        """ Reads and builds the dataset """
+        print("Reading training data...")
         self.train_data, self.train_labels = \
             csv_reader.read("./data/training_data.csv", [0], 1)
 
+        print("Reading validation data...")
         self.valid_data, self.valid_labels = \
             csv_reader.read("./data/validation_data.csv", [0], 1)
 
+        print("Reading testing data...")
         self.test_data, self.test_labels = \
             csv_reader.read("./data/testing_data.csv", [0], 1)
 
         vocab = " ".join(self.train_data).split()
         users = " ".join(self.train_labels).split()
 
+        print("Building dictionaries...")
         _, _, self.word_dict, self.rev_dict = helper.build_dataset(vocab)
 
         _, _, self.users_dict, self.rev_users_dict = helper.build_dataset(users)
