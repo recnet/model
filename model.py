@@ -46,7 +46,7 @@ class Model(object):
         self.max_title_length = 30
         self.lstm_neurons = 100
         self.user_count = 13000
-        self.batch_size = 1
+        self.batch_size = 100
         self.build_graph()
         self.data = data.Data(verbose=True)
         self.load_checkpoint()
@@ -56,8 +56,8 @@ class Model(object):
 
         print("Building graph...")
         # Placeholders for input and output
-        self._input = tf.placeholder(tf.int32, [1, self.max_title_length])
-        self._target = tf.placeholder(tf.int32, [1, None])
+        self._input = tf.placeholder(tf.int32, [None, 1, self.max_title_length], name="input")
+        self._target = tf.placeholder(tf.int32, [None, None], name="target")
 
         # This is the first, and input, layer of our network
         self.lstm_layer = tf.nn.rnn_cell.LSTMCell(self.lstm_neurons,
@@ -150,20 +150,19 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-        for i, sentence in enumerate(self.data.train_data):
-            label = self.data.train_labels[i]
-            sentence_vec = helper.get_indicies(sentence, self.data.word_dict, self.max_title_length)
-            label_vec = helper.label_vector(label.split(), self.data.users_dict, self.user_count)
+        for _ in range(1000):
+            batch_input, batch_label = self.data.next_train_batch \
+                (self.max_title_length, self.user_count, self.batch_size)
 
             self._session.run(self.train_op,
-                              {self._input: [sentence_vec],
-                               self._target: [label_vec]})
+                              {self._input: [batch_input],
+                               self._target: [batch_label]})
             # Debug print out
-            if i % 1000 == 0 and i > 0:
-                print('Training... ', \
-                      self._session.run(self.error,
-                                        {self._input: [sentence_vec],
-                                         self._target: [label_vec]}))
+            print('Training... ',
+                  self._session.run(self.error,
+                                    {self._input: [batch_input],
+                                     self._target: [batch_label]}))
+
         # Save model when done training
         self.save_checkpoint()
 
