@@ -30,12 +30,15 @@ import helper
 FILE_TRAINING = "training_data.csv"
 FILE_VALIDATION = "validation_data.csv"
 FILE_TESTING = "testing_data.csv"
+DEFAULT_BATCH_SIZE = 1
 
 class Data(object):
     """ A class for getting handling data """
     def __init__(self, data_path="./data/", verbose=False):
         self._data_path = data_path
         self._verbose = verbose
+        self._current_train_index = 0
+        self.completed_training_epochs = 0
         self._read_data()
         self._build_dict()
 
@@ -63,3 +66,31 @@ class Data(object):
 
         _, _, self.word_dict, self.rev_dict = helper.build_dataset(vocab)
         _, _, self.users_dict, self.rev_users_dict = helper.build_dataset(users)
+
+    def next_train_batch(self, title_length, user_count,
+                         batch_size=DEFAULT_BATCH_SIZE):
+        """ Get the next batch of training data """
+        batch_x = []
+        batch_y = []
+        for _ in range(0, batch_size):
+            t_i = self._current_train_index
+            sentence = self.train_data[t_i]
+            label = self.train_labels[t_i]
+
+            # Support multiple epochs
+            if t_i >= len(self.train_data):
+                self._current_train_index = 0
+                self.completed_training_epochs += 1
+
+            # Turn sentences and labels into vector representations
+            sentence_vec = helper.get_indicies(sentence,
+                                               self.word_dict, title_length)
+            label_vec = helper.label_vector(label.split(), self.users_dict,
+                                            user_count)
+            batch_x.append(sentence_vec)
+            batch_y.append(label_vec)
+
+        return batch_x, batch_y
+
+
+
