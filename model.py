@@ -32,7 +32,6 @@ import os.path
 import tensorflow as tf
 import csv_reader
 import helper
-import time
 import numpy as np
 
 CKPT_PATH = "checkpoints/model.ckpt"
@@ -45,7 +44,7 @@ class Model(object):
         self.learning_rate = 0.5
         self.embedding_size = 128
         self.max_title_length = 30
-        self.lstm_neurons = 500
+        self.lstm_neurons = 100
         self.user_count = 13000
         self.batch_size = 1
         self.build_graph()
@@ -77,12 +76,13 @@ class Model(object):
     def build_graph(self):
         """ Builds the model in tensorflow """
 
+        print("Building graph...")
         # Placeholders for input and output
         self._input = tf.placeholder(tf.int32, [1, self.max_title_length])
         self._target = tf.placeholder(tf.int32, [1, None])
 
         # This is the first, and input, layer of our network
-        self.lstm_layer = tf.nn.rnn_cell.LSTMCell(self.max_title_length,
+        self.lstm_layer = tf.nn.rnn_cell.LSTMCell(self.lstm_neurons,
                                                   state_is_tuple=True)
         # Embedding matrix for the words
         self._embedding_matrix = tf.Variable(
@@ -103,11 +103,10 @@ class Model(object):
         outputs, state = tf.nn.rnn(self.lstm_layer, embedded_input,
                                    initial_state=initial_state)
         self.lstm_final_state = state
-        #output = tf.reshape(tf.concat_v2(outputs, 1), [-1, self.lstm_neurons])
         output = outputs[-1]
         # Feed the output of the LSTM layer to a softmax layer
         self.softmax_weights = tf.Variable(tf.random_normal(
-            [self.max_title_length, self.user_count],
+            [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
                                            name="weights")
@@ -147,10 +146,9 @@ class Model(object):
 
     def validate(self):
         """ Validates the model """
+        print("Starting validation...")
         errors = 0
         for i, sentence in enumerate(self.valid_data):
-            if i > 10000:
-                break
             label = self.valid_labels[i]
             sentence_vec = helper.get_indicies(sentence, self.word_dict, self.max_title_length)
             label_vec = helper.label_vector(label.split(), self.users_dict, self.user_count)
@@ -165,17 +163,16 @@ class Model(object):
             if lab == 0:
                 errors += 1
 
-            if i % 100 == 0 and i > 0:
+            if i % 1000 == 0 and i > 0:
                 print("Error rate: ", errors/i)
-        
+
         print("Errors: ", errors)
-        print("Final error rate: ", errors/10000)
-    
+        print("Final error rate: ", errors/len(self.valid_data))
+
     def train(self):
         """ Trains the model on the dataset """
+        print("Starting training...")
         for i, sentence in enumerate(self.train_data):
-            if i > 10000:
-                break
             label = self.train_labels[i]
             sentence_vec = helper.get_indicies(sentence, self.word_dict, self.max_title_length)
             label_vec = helper.label_vector(label.split(), self.users_dict, self.user_count)
@@ -184,7 +181,7 @@ class Model(object):
                               {self._input: [sentence_vec],
                                self._target: [label_vec]})
             # Debug print out
-            if i % 100 == 0 and i > 0:
+            if i % 1000 == 0 and i > 0:
                 print('Training... ', \
                       self._session.run(self.error,
                                         {self._input: [sentence_vec],
