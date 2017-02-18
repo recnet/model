@@ -128,8 +128,12 @@ class Model(object):
         errors = 0
         for i, sentence in enumerate(self.data.valid_data):
             label = self.data.valid_labels[i]
-            sentence_vec = helper.get_indicies(sentence, self.data.word_dict, self.max_title_length)
-            label_vec = helper.label_vector(label.split(), self.data.users_dict, self.user_count)
+            sentence_vec = helper.get_indicies(sentence,
+                                               self.data.word_dict,
+                                               self.max_title_length)
+            label_vec = helper.label_vector(label.split(),
+                                            self.data.users_dict,
+                                            self.user_count)
 
             res = self._session.run(self.softmax,
                                     {self._input: [sentence_vec],
@@ -158,10 +162,14 @@ class Model(object):
                               {self._input: batch_input,
                                self._target: batch_label})
             # Debug print out
-            print('Training... ',
-                  self._session.run(self.error,
-                                    {self._input: batch_input,
-                                     self._target: batch_label}))
+            epoch = self.data.completed_training_epochs
+            done = self.data.percent_of_epoch
+            error = self._session.run(self.error,
+                                      feed_dict={self._input: batch_input,
+                                                 self._target: batch_label})
+
+            print("Training... Epoch: {:d}, Done: {:%}, Error: {:f}" \
+                .format(epoch, done, error))
 
         # Save model when done training
         self.save_checkpoint()
