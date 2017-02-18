@@ -98,5 +98,7 @@ class Data(object):
         self.percent_of_epoch = self._current_train_index / self.train_size
         return batch_x, batch_y
 
-
-
+    def for_n_train_epochs(self, num_epochs=1, batch_size=DEFAULT_BATCH_SIZE):
+        """ Calculates how many training iterations to do for num_epochs
+        number of epochs with a batch size of batch_size """
+        return range((self.train_size*num_epochs)//batch_size)

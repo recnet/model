@@ -47,6 +47,7 @@ class Model(object):
         self.lstm_neurons = 100
         self.user_count = 13000
         self.batch_size = 100
+        self.training_epochs = 1
         self.build_graph()
         self.data = data.Data(verbose=True)
         self.load_checkpoint()
@@ -56,8 +57,12 @@ class Model(object):
 
         print("Building graph...")
         # Placeholders for input and output
-        self._input = tf.placeholder(tf.int32, [self.batch_size, self.max_title_length], name="input")
-        self._target = tf.placeholder(tf.int32, [self.batch_size, self.user_count], name="target")
+        self._input = tf.placeholder(tf.int32,
+                                     [self.batch_size, self.max_title_length],
+                                     name="input")
+        self._target = tf.placeholder(tf.int32,
+                                      [self.batch_size, self.user_count],
+                                      name="target")
 
         # This is the first, and input, layer of our network
         self.lstm_layer = tf.nn.rnn_cell.LSTMCell(self.lstm_neurons,
@@ -154,7 +159,9 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-        for _ in range(1000):
+        # Train for a specified amount of epochs
+        for _ in self.data.for_n_train_epochs(self.training_epochs,
+                                              self.batch_size):
             batch_input, batch_label = self.data.next_train_batch \
                 (self.max_title_length, self.user_count, self.batch_size)
 
