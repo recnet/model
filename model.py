@@ -56,8 +56,8 @@ class Model(object):
 
         print("Building graph...")
         # Placeholders for input and output
-        self._input = tf.placeholder(tf.int32, [None, 1, self.max_title_length], name="input")
-        self._target = tf.placeholder(tf.int32, [None, None], name="target")
+        self._input = tf.placeholder(tf.int32, [self.batch_size, self.max_title_length], name="input")
+        self._target = tf.placeholder(tf.int32, [self.batch_size, self.user_count], name="target")
 
         # This is the first, and input, layer of our network
         self.lstm_layer = tf.nn.rnn_cell.LSTMCell(self.lstm_neurons,
@@ -68,6 +68,7 @@ class Model(object):
                 [self.vocabulary_size, self.embedding_size],
                 -1.0, 1.0, dtype=tf.float64),
             name="embeddings")
+
         embedded_input = tf.nn.embedding_lookup(self._embedding_matrix,
                                                 self._input)
         embedded_input = tf.unstack(embedded_input, num=self.max_title_length,
@@ -77,7 +78,6 @@ class Model(object):
 
         initial_state = self.lstm_layer.zero_state(self.batch_size,
                                                    dtype=tf.float64)
-
         outputs, state = tf.nn.rnn(self.lstm_layer, embedded_input,
                                    initial_state=initial_state)
         self.lstm_final_state = state
@@ -155,13 +155,13 @@ class Model(object):
                 (self.max_title_length, self.user_count, self.batch_size)
 
             self._session.run(self.train_op,
-                              {self._input: [batch_input],
-                               self._target: [batch_label]})
+                              {self._input: batch_input,
+                               self._target: batch_label})
             # Debug print out
             print('Training... ',
                   self._session.run(self.error,
-                                    {self._input: [batch_input],
-                                     self._target: [batch_label]}))
+                                    {self._input: batch_input,
+                                     self._target: batch_label}))
 
         # Save model when done training
         self.save_checkpoint()
