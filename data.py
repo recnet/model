@@ -74,12 +74,12 @@ class Data(object):
         batch_x = []
         batch_y = []
         for _ in range(0, batch_size):
-            t_i = self._current_train_index
-            sentence = self.train_data[t_i]
-            label = self.train_labels[t_i]
+            sentence = self.train_data[self._current_train_index]
+            label = self.train_labels[self._current_train_index]
+            self._current_train_index += 1
 
             # Support multiple epochs
-            if t_i >= len(self.train_data):
+            if self._current_train_index >= len(self.train_data):
                 self._current_train_index = 0
                 self.completed_training_epochs += 1
                 self.percent_of_epoch = 0.0
@@ -91,7 +91,6 @@ class Data(object):
                                             user_count)
             batch_x.append(sentence_vec)
             batch_y.append(label_vec)
-            self._current_train_index += 1
 
         self.percent_of_epoch = self._current_train_index / len(self.train_data)
         return batch_x, batch_y
