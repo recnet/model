@@ -49,14 +49,17 @@ class Data(object):
             print("Reading training data...")
         self.train_data, self.train_labels = \
             csv_reader.read(self._data_path + FILE_TRAINING, [0], 1)
+        self.train_size = len(self.train_data)
         if self._verbose:
             print("Reading validation data...")
         self.valid_data, self.valid_labels = \
             csv_reader.read(self._data_path + FILE_VALIDATION, [0], 1)
+        self.valid_size = len(self.valid_data)
         if self._verbose:
             print("Reading testing data...")
         self.test_data, self.test_labels = \
             csv_reader.read(self._data_path + FILE_TESTING, [0], 1)
+        self.test_size = len(self.test_data)
 
     def _build_dict(self):
         """ Builds dictionaries using given data """
@@ -79,7 +82,7 @@ class Data(object):
             self._current_train_index += 1
 
             # Support multiple epochs
-            if self._current_train_index >= len(self.train_data):
+            if self._current_train_index >= self.train_size:
                 self._current_train_index = 0
                 self.completed_training_epochs += 1
                 self.percent_of_epoch = 0.0
@@ -92,7 +95,7 @@ class Data(object):
             batch_x.append(sentence_vec)
             batch_y.append(label_vec)
 
-        self.percent_of_epoch = self._current_train_index / len(self.train_data)
+        self.percent_of_epoch = self._current_train_index / self.train_size
         return batch_x, batch_y
 
 
