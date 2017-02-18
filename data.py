@@ -39,6 +39,7 @@ class Data(object):
         self._verbose = verbose
         self._current_train_index = 0
         self.completed_training_epochs = 0
+        self.percent_of_epoch = 0.0
         self._read_data()
         self._build_dict()
 
@@ -81,6 +82,7 @@ class Data(object):
             if t_i >= len(self.train_data):
                 self._current_train_index = 0
                 self.completed_training_epochs += 1
+                self.percent_of_epoch = 0.0
 
             # Turn sentences and labels into vector representations
             sentence_vec = helper.get_indicies(sentence,
@@ -89,7 +91,9 @@ class Data(object):
                                             user_count)
             batch_x.append(sentence_vec)
             batch_y.append(label_vec)
+            self._current_train_index += 1
 
+        self.percent_of_epoch = self._current_train_index / len(self.train_data)
         return batch_x, batch_y
 
 
