@@ -27,9 +27,9 @@ A module for handling training, validation and test data for the ANN model
 import csv_reader
 import helper
 
-FILE_TRAINING = "training_data.csv"
-FILE_VALIDATION = "validation_data.csv"
-FILE_TESTING = "testing_data.csv"
+FILE_TRAINING = "training_data_top_n.csv"
+FILE_VALIDATION = "validation_data_top_n.csv"
+FILE_TESTING = "testing_data_top_n.csv"
 DEFAULT_BATCH_SIZE = 1
 
 class Data(object):
