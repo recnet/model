@@ -48,6 +48,15 @@ class Model(object):
         self.user_count = 13000
         self.batch_size = 50
         self.training_epochs = 5
+        # Will be set in build_graph
+        self._input = None
+        self._target = None
+        self.softmax = None
+        self.train_op = None
+        self.error = None
+        self._init_op = None
+        self.saver = None
+
         self.build_graph()
         self.data = data.Data(verbose=True)
         self.load_checkpoint()
@@ -65,37 +74,37 @@ class Model(object):
                                       name="target")
 
         # This is the first, and input, layer of our network
-        self.lstm_layer = tf.nn.rnn_cell.LSTMCell(self.lstm_neurons,
+        lstm_layer = tf.nn.rnn_cell.LSTMCell(self.lstm_neurons,
                                                   state_is_tuple=True)
         # Embedding matrix for the words
-        self._embedding_matrix = tf.Variable(
+        embedding_matrix = tf.Variable(
             tf.random_uniform(
                 [self.vocabulary_size, self.embedding_size],
                 -1.0, 1.0, dtype=tf.float64),
             name="embeddings")
 
-        embedded_input = tf.nn.embedding_lookup(self._embedding_matrix,
+        embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._input)
 
         # Run the LSTM layer with the embedded input
-        outputs, state = tf.nn.dynamic_rnn(self.lstm_layer, embedded_input,
+        outputs, state = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
                                            dtype=tf.float64)
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
-        self.lstm_final_state = state
+
         # Feed the output of the LSTM layer to a softmax layer
-        self.softmax_weights = tf.Variable(tf.random_normal(
+        softmax_weights = tf.Variable(tf.random_normal(
             [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
                                            name="weights")
 
-        self.softmax_bias = tf.Variable(tf.random_normal([self.user_count],
+        softmax_bias = tf.Variable(tf.random_normal([self.user_count],
                                                          stddev=0.35,
                                                          dtype=tf.float64),
                                         name="biases")
 
-        logits = tf.matmul(output, self.softmax_weights) + self.softmax_bias
+        logits = tf.matmul(output, softmax_weights) + softmax_bias
         self.softmax = tf.nn.softmax(logits)
 
         # Defne error function
@@ -172,8 +181,10 @@ class Model(object):
                                        feed_dict={self._input: batch_input,
                                                   self._target: batch_label})
 
-            print("Training... Epoch: {:d}, Done: {:%}, Average error: {:f}" \
-                .format(epoch, done, error/i))
+            # skip division by zero :)
+            if i:
+                print("Training... Epoch: {:d}, Done: {:%}, Average error: {:f}" \
+                      .format(epoch, done, error/i))
 
         # Save model when done training
         self.save_checkpoint()
