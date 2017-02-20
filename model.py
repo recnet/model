@@ -41,13 +41,13 @@ class Model(object):
     def __init__(self, session):
         self._session = session
         self.vocabulary_size = 50000
-        self.learning_rate = 0.5
-        self.embedding_size = 128
+        self.learning_rate = 0.2
+        self.embedding_size = 160
         self.max_title_length = 30
-        self.lstm_neurons = 100
+        self.lstm_neurons = 500
         self.user_count = 13000
-        self.batch_size = 100
-        self.training_epochs = 1
+        self.batch_size = 50
+        self.training_epochs = 5
         self.build_graph()
         self.data = data.Data(verbose=True)
         self.load_checkpoint()
@@ -58,10 +58,10 @@ class Model(object):
         print("Building graph...")
         # Placeholders for input and output
         self._input = tf.placeholder(tf.int32,
-                                     [self.batch_size, self.max_title_length],
+                                     [None, self.max_title_length],
                                      name="input")
         self._target = tf.placeholder(tf.int32,
-                                      [self.batch_size, self.user_count],
+                                      [None, self.user_count],
                                       name="target")
 
         # This is the first, and input, layer of our network
@@ -76,17 +76,13 @@ class Model(object):
 
         embedded_input = tf.nn.embedding_lookup(self._embedding_matrix,
                                                 self._input)
-        embedded_input = tf.unstack(embedded_input, num=self.max_title_length,
-                                    axis=1)
 
         # Run the LSTM layer with the embedded input
-
-        initial_state = self.lstm_layer.zero_state(self.batch_size,
-                                                   dtype=tf.float64)
-        outputs, state = tf.nn.rnn(self.lstm_layer, embedded_input,
-                                   initial_state=initial_state)
-        self.lstm_final_state = state
+        outputs, state = tf.nn.dynamic_rnn(self.lstm_layer, embedded_input,
+                                           dtype=tf.float64)
+        outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
+        self.lstm_final_state = state
         # Feed the output of the LSTM layer to a softmax layer
         self.softmax_weights = tf.Variable(tf.random_normal(
             [self.lstm_neurons, self.user_count],
@@ -150,7 +146,7 @@ class Model(object):
             if lab == 0:
                 errors += 1
 
-            if i % 1000 == 0 and i > 0:
+            if i % 100 == 0 and i > 0:
                 print("Error rate: ", errors/i)
 
         print("Errors: ", errors)
@@ -159,8 +155,9 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
+        error = 0
         # Train for a specified amount of epochs
-        for _ in self.data.for_n_train_epochs(self.training_epochs,
+        for i in self.data.for_n_train_epochs(self.training_epochs,
                                               self.batch_size):
             batch_input, batch_label = self.data.next_train_batch \
                 (self.max_title_length, self.user_count, self.batch_size)
@@ -171,12 +168,12 @@ class Model(object):
             # Debug print out
             epoch = self.data.completed_training_epochs
             done = self.data.percent_of_epoch
-            error = self._session.run(self.error,
-                                      feed_dict={self._input: batch_input,
-                                                 self._target: batch_label})
+            error += self._session.run(self.error,
+                                       feed_dict={self._input: batch_input,
+                                                  self._target: batch_label})
 
-            print("Training... Epoch: {:d}, Done: {:%}, Error: {:f}" \
-                .format(epoch, done, error))
+            print("Training... Epoch: {:d}, Done: {:%}, Average error: {:f}" \
+                .format(epoch, done, error/i))
 
         # Save model when done training
         self.save_checkpoint()
