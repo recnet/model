@@ -41,12 +41,12 @@ class Model(object):
     def __init__(self, session):
         self._session = session
         self.vocabulary_size = 50000
-        self.learning_rate = 0.2
-        self.embedding_size = 160
+        self.learning_rate = 0.8
+        self.embedding_size = 100
         self.max_title_length = 30
-        self.lstm_neurons = 500
+        self.lstm_neurons = 200
         self.user_count = 13000
-        self.batch_size = 50
+        self.batch_size = 100
         self.training_epochs = 5
         # Will be set in build_graph
         self._input = None
@@ -58,7 +58,7 @@ class Model(object):
         self.saver = None
 
         self.build_graph()
-        self.data = data.Data(verbose=True)
+        self.data = data.Data(data_path="./data/top5/", verbose=True)
         self.load_checkpoint()
 
     def build_graph(self):
@@ -136,6 +136,7 @@ class Model(object):
         """ Validates the model """
         print("Starting validation...")
         errors = 0
+
         for i, sentence in enumerate(self.data.valid_data):
             label = self.data.valid_labels[i]
             sentence_vec = helper.get_indicies(sentence,
@@ -155,39 +156,69 @@ class Model(object):
             if lab == 0:
                 errors += 1
 
-            if i % 100 == 0 and i > 0:
-                print("Error rate: ", errors/i)
+            # if i % 100 == 0 and i > 0:
+                # print("Error rate: ", errors/i)
 
-        print("Errors: ", errors)
-        print("Final error rate: ", errors/len(self.data.valid_data))
+        # print("Errors: ", errors)
+        # print("Final error rate: ", errors/len(self.data.valid_data))
+        return errors/self.data.valid_size
+
+    def validate_batch(self):
+        errors = 0
+        data_batch, label_batch = self.data.next_valid_batch \
+            (self.max_title_length, self.user_count, self.batch_size)
+        # for i in range(self.batch_size):
+        #     res = self._session.run(self.softmax,
+        #                             {self._input: [data_batch[i]],
+        #                              self._target: [label_batch[i]]})[0]
+        #
+        #     ind = np.argmax(res)
+        #     lab = label_batch[i][ind]
+        #
+        #
+        #     if lab == 0:
+        #         errors += 1
+
+        return self._session.run(self.error,
+                                   feed_dict={self._input: data_batch,
+                                              self._target: label_batch})
 
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-        error = 0
+
         # Train for a specified amount of epochs
         for i in self.data.for_n_train_epochs(self.training_epochs,
                                               self.batch_size):
-            batch_input, batch_label = self.data.next_train_batch \
-                (self.max_title_length, self.user_count, self.batch_size)
-
-            self._session.run(self.train_op,
-                              {self._input: batch_input,
-                               self._target: batch_label})
             # Debug print out
             epoch = self.data.completed_training_epochs
             done = self.data.percent_of_epoch
-            error += self._session.run(self.error,
-                                       feed_dict={self._input: batch_input,
-                                                  self._target: batch_label})
+            error = self.train_batch()
+            validation_error = 0
+            # if i % 10 == 0:
+            #     validation_error = self.validate()
+            #     print("Validation error: ", validation_error)
+            # else:
+            validation_error = self.validate_batch()
 
-            # skip division by zero :)
             if i:
-                print("Training... Epoch: {:d}, Done: {:%}, Average error: {:f}" \
-                      .format(epoch, done, error/i))
-
+                print("Training... Epoch: {:d}, Done: {:%}" \
+                      .format(epoch, done))
+                print("Validation error: {:f}, Training error {:f}".format(validation_error, error))
         # Save model when done training
         self.save_checkpoint()
+
+    def train_batch(self):
+        batch_input, batch_label = self.data.next_train_batch \
+            (self.max_title_length, self.user_count, self.batch_size)
+
+        self._session.run(self.train_op,
+                          {self._input: batch_input,
+                           self._target: batch_label})
+
+        return self._session.run(self.error,
+                                   feed_dict={self._input: batch_input,
+                                              self._target: batch_label})
 
 def main():
     """ A main method that creates the model and starts training it """

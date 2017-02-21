@@ -106,7 +106,8 @@ class Data(object):
         batch_y = []
         for _ in range(0, batch_size):
             sentence = self.valid_data[self._current_valid_index]
-            label = self.valid_data[self._current_valid_index]
+            label = self.valid_labels[self._current_valid_index]
+
             self._current_valid_index += 1
 
             # Support multiple epochs
