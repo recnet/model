@@ -38,6 +38,7 @@ class Data(object):
         self._data_path = data_path
         self._verbose = verbose
         self._current_train_index = 0
+        self._current_valid_index = 0
         self.completed_training_epochs = 0
         self.percent_of_epoch = 0.0
         self._read_data()
@@ -96,6 +97,29 @@ class Data(object):
             batch_y.append(label_vec)
 
         self.percent_of_epoch = self._current_train_index / self.train_size
+        return batch_x, batch_y
+
+    def next_valid_batch(self, title_length, user_count,
+                         batch_size=DEFAULT_BATCH_SIZE):
+        """ Get the next batch of validation data """
+        batch_x = []
+        batch_y = []
+        for _ in range(0, batch_size):
+            sentence = self.valid_data[self._current_valid_index]
+            label = self.valid_data[self._current_valid_index]
+            self._current_valid_index += 1
+
+            # Support multiple epochs
+            if self._current_valid_index >= self.valid_size:
+                self._current_valid_index = 0
+
+            # Turn sentences and labels into vectors
+            sentence_vec = helper.get_indicies(sentence,
+                                               self.word_dict, title_length)
+            label_vec = helper.label_vector(label.split(), self.users_dict,
+                                            user_count)
+            batch_x.append(sentence_vec)
+            batch_y.append(label_vec)
         return batch_x, batch_y
 
     def for_n_train_epochs(self, num_epochs=1, batch_size=DEFAULT_BATCH_SIZE):
