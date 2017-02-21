@@ -43,7 +43,7 @@ def read(file_path, data_column, label_column):
             label = label.replace(',', '')
             data_full.append(data.strip(' ').strip(','))
             label_full.append(label)
-        return [data_full, label_full]
+        return data_full, label_full
 
 # [data, labels] = read("../data/training_data.csv",[0],1)
 #
