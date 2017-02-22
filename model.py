@@ -214,6 +214,7 @@ class Model(object):
                           {self._input: batch_input,
                            self._target: batch_label})
 
+        self.save_checkpoint()
         return self._session.run(self.error,
                                  feed_dict={self._input: batch_input,
                                             self._target: batch_label})
