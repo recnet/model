@@ -41,14 +41,14 @@ class Model(object):
     def __init__(self, session):
         self._session = session
         self.vocabulary_size = 50000
-        self.learning_rate = 0.5
-        self.embedding_size = 150
+        self.learning_rate = 0.3
+        self.embedding_size = 165
         self.max_title_length = 30
-        self.lstm_neurons = 500
+        self.lstm_neurons = 1000
         self.user_count = 13000
-        self.batch_size = 100
+        self.batch_size = 25
         self.training_epochs = 10
-        self.users_to_select = 15
+        self.users_to_select = 2
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -59,7 +59,8 @@ class Model(object):
         self.saver = None
 
         self.build_graph()
-        self.data = data.Data(data_path="./data/top5/", verbose=True)
+        with tf.device("/cpu:0"):
+            self.data = data.Data(data_path="./data/", verbose=True)
         self.load_checkpoint()
 
     def build_graph(self):
@@ -88,8 +89,8 @@ class Model(object):
                                                 self._input)
 
         # Run the LSTM layer with the embedded input
-        outputs, state = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
-                                           dtype=tf.float64)
+        outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
+                                       dtype=tf.float64)
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
 
@@ -169,12 +170,13 @@ class Model(object):
                     true_positives += 1
 
         precision = true_positives / (true_positives + false_positives)
-        print("Final validation... Precision: {:%}".format(precision))
+        print("Precision: {:%}".format(precision))
         return precision
 
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
-        data_batch, label_batch = self.data.next_valid_batch \
+        with tf.device("/cpu:0"):
+            data_batch, label_batch = self.data.next_valid_batch \
             (self.max_title_length, self.user_count, self.batch_size)
 
         return self._session.run(self.error,
@@ -203,32 +205,28 @@ class Model(object):
             error_sum += error
             val_error_sum += validation_error
 
-            if i % 10 == 0:
-                new_avg_err = error_sum / 10
-                new_val_avg_err = val_error_sum / 10
-                error_sum = 0
-                val_error_sum = 0
-                if np.sign(new_val_avg_err - old_val_avg_err) > np.sign(new_avg_err - old_avg_err):
-                    iters_diverge += 1
-                    print("Diff")
-                else:
-                    print("Reset")
-                    iters_diverge = 0
-                old_avg_err = new_avg_err
-                old_val_avg_err = new_val_avg_err
-                print("Validation error: {:f}, Training error {:f}".format(new_val_avg_err, new_avg_err))
-
-            # Print completion every 10%
-            if done % 0.1 <= 0.03:
+            # Don't validate so often
+            if i % (self.data.train_size//self.batch_size//10) == 0 and i:
+                avg_val_err = val_error_sum/i
+                avg_trn_err = error_sum/i
                 print("Training... Epoch: {:d}, Done: {:%}" \
-                      .format(epoch, done))
+                    .format(epoch, done))
+                print("Validation error: {:f} ({:f}), Training error {:f} ({:f})" \
+                    .format(validation_error, avg_val_err, error, avg_trn_err))
+
+            # Do a full evaluation once an epoch is complete
+            if epoch != old_epoch:
+                print("Epoch complete...")
+                self.validate()
+            old_epoch = epoch
 
         # Save model when done training
         self.save_checkpoint()
 
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
-        batch_input, batch_label = self.data.next_train_batch \
+        with tf.device("/cpu:0"):
+            batch_input, batch_label = self.data.next_train_batch \
             (self.max_title_length, self.user_count, self.batch_size)
 
         self._session.run(self.train_op,
@@ -244,7 +242,7 @@ def main():
     """ A main method that creates the model and starts training it """
     model = Model(tf.InteractiveSession())
     model.train()
-    # model.validate()
+    model.validate()
 
 if __name__ == "__main__":
     main()
