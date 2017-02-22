@@ -184,25 +184,24 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-
+        old_epoch = 0
         # Train for a specified amount of epochs
-        for i in self.data.for_n_train_epochs(self.training_epochs,
+        for _ in self.data.for_n_train_epochs(self.training_epochs,
                                               self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
             done = self.data.percent_of_epoch
             error = self.train_batch()
-            validation_error = 0
-            # if i % 10 == 0:
-            #     validation_error = self.validate()
-            #     print("Validation error: ", validation_error)
-            # else:
             validation_error = self.validate_batch()
 
-            if i:
+            # Print completion every 10%
+            if done % 0.1 <= 0.03:
                 print("Training... Epoch: {:d}, Done: {:%}" \
                       .format(epoch, done))
+            if epoch != old_epoch:
                 print("Validation error: {:f}, Training error {:f}".format(validation_error, error))
+            old_epoch = epoch
+
         # Save model when done training
         self.save_checkpoint()
 
