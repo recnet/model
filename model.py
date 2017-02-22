@@ -42,13 +42,13 @@ class Model(object):
         self._session = session
         self.vocabulary_size = 50000
         self.learning_rate = 0.5
-        self.embedding_size = 128
+        self.embedding_size = 150
         self.max_title_length = 30
         self.lstm_neurons = 500
         self.user_count = 13000
         self.batch_size = 100
-        self.training_epochs = 5
-        self.users_to_select = 2
+        self.training_epochs = 10
+        self.users_to_select = 15
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -59,7 +59,7 @@ class Model(object):
         self.saver = None
 
         self.build_graph()
-        self.data = data.Data(data_path="./data/", verbose=True)
+        self.data = data.Data(data_path="./data/top5/", verbose=True)
         self.load_checkpoint()
 
     def build_graph(self):
@@ -129,9 +129,9 @@ class Model(object):
         else:
             self._session.run(self._init_op)
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, path=CKPT_PATH):
         """ Saves the model to a file """
-        self.saver.save(self._session, CKPT_PATH)
+        self.saver.save(self._session, path)
 
     def validate(self):
         """ Validates the model and returns the final precision """
@@ -184,9 +184,15 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-        old_epoch = 0
+
+
+        iters_diverge = 0
+        error_sum = 0
+        val_error_sum = 0
+        old_avg_err = 0
+        old_val_avg_err = 0
         # Train for a specified amount of epochs
-        for _ in self.data.for_n_train_epochs(self.training_epochs,
+        for i in self.data.for_n_train_epochs(self.training_epochs,
                                               self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
@@ -194,13 +200,28 @@ class Model(object):
             error = self.train_batch()
             validation_error = self.validate_batch()
 
+            error_sum += error
+            val_error_sum += validation_error
+
+            if i % 10 == 0:
+                new_avg_err = error_sum / 10
+                new_val_avg_err = val_error_sum / 10
+                error_sum = 0
+                val_error_sum = 0
+                if np.sign(new_val_avg_err - old_val_avg_err) > np.sign(new_avg_err - old_avg_err):
+                    iters_diverge += 1
+                    print("Diff")
+                else:
+                    print("Reset")
+                    iters_diverge = 0
+                old_avg_err = new_avg_err
+                old_val_avg_err = new_val_avg_err
+                print("Validation error: {:f}, Training error {:f}".format(new_val_avg_err, new_avg_err))
+
             # Print completion every 10%
             if done % 0.1 <= 0.03:
                 print("Training... Epoch: {:d}, Done: {:%}" \
                       .format(epoch, done))
-            if epoch != old_epoch:
-                print("Validation error: {:f}, Training error {:f}".format(validation_error, error))
-            old_epoch = epoch
 
         # Save model when done training
         self.save_checkpoint()
@@ -223,7 +244,7 @@ def main():
     """ A main method that creates the model and starts training it """
     model = Model(tf.InteractiveSession())
     model.train()
-    model.validate()
+    # model.validate()
 
 if __name__ == "__main__":
     main()
