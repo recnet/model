@@ -41,13 +41,14 @@ class Model(object):
     def __init__(self, session):
         self._session = session
         self.vocabulary_size = 50000
-        self.learning_rate = 0.8
-        self.embedding_size = 100
+        self.learning_rate = 0.5
+        self.embedding_size = 128
         self.max_title_length = 30
-        self.lstm_neurons = 200
+        self.lstm_neurons = 500
         self.user_count = 13000
         self.batch_size = 100
         self.training_epochs = 5
+        self.users_to_select = 2
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -58,7 +59,7 @@ class Model(object):
         self.saver = None
 
         self.build_graph()
-        self.data = data.Data(data_path="./data/top5/", verbose=True)
+        self.data = data.Data(data_path="./data/", verbose=True)
         self.load_checkpoint()
 
     def build_graph(self):
@@ -75,7 +76,7 @@ class Model(object):
 
         # This is the first, and input, layer of our network
         lstm_layer = tf.nn.rnn_cell.LSTMCell(self.lstm_neurons,
-                                                  state_is_tuple=True)
+                                             state_is_tuple=True)
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
             tf.random_uniform(
@@ -97,12 +98,12 @@ class Model(object):
             [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
-                                           name="weights")
+                                      name="weights")
 
         softmax_bias = tf.Variable(tf.random_normal([self.user_count],
-                                                         stddev=0.35,
-                                                         dtype=tf.float64),
-                                        name="biases")
+                                                    stddev=0.35,
+                                                    dtype=tf.float64),
+                                   name="biases")
 
         logits = tf.matmul(output, softmax_weights) + softmax_bias
         self.softmax = tf.nn.softmax(logits)
@@ -133,9 +134,10 @@ class Model(object):
         self.saver.save(self._session, CKPT_PATH)
 
     def validate(self):
-        """ Validates the model """
+        """ Validates the model and returns the final precision """
         print("Starting validation...")
-        errors = 0
+        true_positives = 0
+        false_positives = 0
 
         for i, sentence in enumerate(self.data.valid_data):
             label = self.data.valid_labels[i]
@@ -149,39 +151,35 @@ class Model(object):
             res = self._session.run(self.softmax,
                                     {self._input: [sentence_vec],
                                      self._target: [label_vec]})
-            ind = np.argmax(res[0])
-            val = res[0][ind]
-            lab = label_vec[ind]
+            res = res[0]
 
-            if lab == 0:
-                errors += 1
+            # Get the top k probable users from the softmax
+            to_select = self.users_to_select
+            if len(label.split()) < to_select:
+                # If fewer users than k actually liked the post we
+                # don't want incorrect error numbers
+                to_select = len(label.split())
+            indicies = np.argsort(res)[-to_select:]
 
-            # if i % 100 == 0 and i > 0:
-                # print("Error rate: ", errors/i)
+            for j in indicies:
+                lab = label_vec[j]
+                if lab == 0:
+                    false_positives += 1
+                else:
+                    true_positives += 1
 
-        # print("Errors: ", errors)
-        # print("Final error rate: ", errors/len(self.data.valid_data))
-        return errors/self.data.valid_size
+        precision = true_positives / (true_positives + false_positives)
+        print("Final validation... Precision: {:%}".format(precision))
+        return precision
 
     def validate_batch(self):
-        errors = 0
+        """ Validates a batch of data and returns cross entropy error """
         data_batch, label_batch = self.data.next_valid_batch \
             (self.max_title_length, self.user_count, self.batch_size)
-        # for i in range(self.batch_size):
-        #     res = self._session.run(self.softmax,
-        #                             {self._input: [data_batch[i]],
-        #                              self._target: [label_batch[i]]})[0]
-        #
-        #     ind = np.argmax(res)
-        #     lab = label_batch[i][ind]
-        #
-        #
-        #     if lab == 0:
-        #         errors += 1
 
         return self._session.run(self.error,
-                                   feed_dict={self._input: data_batch,
-                                              self._target: label_batch})
+                                 feed_dict={self._input: data_batch,
+                                            self._target: label_batch})
 
     def train(self):
         """ Trains the model on the dataset """
@@ -209,6 +207,7 @@ class Model(object):
         self.save_checkpoint()
 
     def train_batch(self):
+        """ Trains for one batch and returns cross entropy error """
         batch_input, batch_label = self.data.next_train_batch \
             (self.max_title_length, self.user_count, self.batch_size)
 
@@ -217,8 +216,8 @@ class Model(object):
                            self._target: batch_label})
 
         return self._session.run(self.error,
-                                   feed_dict={self._input: batch_input,
-                                              self._target: batch_label})
+                                 feed_dict={self._input: batch_input,
+                                            self._target: batch_label})
 
 def main():
     """ A main method that creates the model and starts training it """
