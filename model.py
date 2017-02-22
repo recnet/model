@@ -188,11 +188,9 @@ class Model(object):
         print("Starting training...")
 
 
-        iters_diverge = 0
         error_sum = 0
         val_error_sum = 0
-        old_avg_err = 0
-        old_val_avg_err = 0
+        old_epoch = 0
         # Train for a specified amount of epochs
         for i in self.data.for_n_train_epochs(self.training_epochs,
                                               self.batch_size):
