@@ -60,7 +60,7 @@ class Model(object):
 
         self.build_graph()
         with tf.device("/cpu:0"):
-            self.data = data.Data(data_path="./data/", verbose=True)
+            self.data = data.Data(data_path="./data/top5/", verbose=True)
         self.load_checkpoint()
 
     def build_graph(self):

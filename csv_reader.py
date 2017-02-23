@@ -45,7 +45,7 @@ def read(file_path, data_column, label_column):
             label_full.append(label)
         return data_full, label_full
 
-# [data, labels] = read("../data/training_data.csv",[0],1)
+# [data, labels] = read("data/top5/training_data_top_n.csv",[0],1)
 #
 # for i in range(len(data)):
 #      print("Data: ", data[i])
