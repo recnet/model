@@ -76,7 +76,7 @@ class Model(object):
                                       name="target")
 
         # This is the first, and input, layer of our network
-        lstm_layer = tf.nn.rnn_cell.LSTMCell(self.lstm_neurons,
+        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons,
                                              state_is_tuple=True)
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
