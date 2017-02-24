@@ -153,7 +153,6 @@ class Data(object):
         self._current_test_index = 0
         batch_x, batch_y = self.next_testing_batch(title_length, user_count,
                                                  self.test_size)
-        print('test size ', len(batch_x))
         self._current_test_index = old_ind
         return batch_x, batch_y
 
