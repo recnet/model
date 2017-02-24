@@ -44,10 +44,10 @@ class Model(object):
         self.learning_rate = 0.3
         self.embedding_size = 165
         self.max_title_length = 30
-        self.lstm_neurons = 1000
+        self.lstm_neurons = 200
         self.user_count = 13000
         self.batch_size = 25
-        self.training_epochs = 10
+        self.training_epochs = 2
         self.users_to_select = 2
         # Will be set in build_graph
         self._input = None
@@ -61,7 +61,7 @@ class Model(object):
         self.build_graph()
         with tf.device("/cpu:0"):
             self.data = data.Data(data_path="./data/top5/", verbose=True)
-        self.load_checkpoint()
+            self.load_checkpoint()
 
     def build_graph(self):
         """ Builds the model in tensorflow """
@@ -117,6 +117,8 @@ class Model(object):
             self.learning_rate).minimize(cross_entropy)
         self.error = cross_entropy
 
+        self.precision = tf.metrics.precision(self._target, self.softmax)
+
         # Last step
         self._init_op = tf.global_variables_initializer()
         self.saver = tf.train.Saver()
@@ -137,41 +139,14 @@ class Model(object):
     def validate(self):
         """ Validates the model and returns the final precision """
         print("Starting validation...")
-        true_positives = 0
-        false_positives = 0
+        val_data, val_labels = self.data.get_validation(self.max_title_length, self.user_count)
 
-        for i, sentence in enumerate(self.data.valid_data):
-            label = self.data.valid_labels[i]
-            sentence_vec = helper.get_indicies(sentence,
-                                               self.data.word_dict,
-                                               self.max_title_length)
-            label_vec = helper.label_vector(label.split(),
-                                            self.data.users_dict,
-                                            self.user_count)
+        res = self._session.run(self.precision, {self._input: val_data, self._target: val_labels})
 
-            res = self._session.run(self.softmax,
-                                    {self._input: [sentence_vec],
-                                     self._target: [label_vec]})
-            res = res[0]
 
-            # Get the top k probable users from the softmax
-            to_select = self.users_to_select
-            if len(label.split()) < to_select:
-                # If fewer users than k actually liked the post we
-                # don't want incorrect error numbers
-                to_select = len(label.split())
-            indicies = np.argsort(res)[-to_select:]
-
-            for j in indicies:
-                lab = label_vec[j]
-                if lab == 0:
-                    false_positives += 1
-                else:
-                    true_positives += 1
-
-        precision = true_positives / (true_positives + false_positives)
-        print("Precision: {:%}".format(precision))
-        return precision
+        print(res)
+        print("Precision: {:%}")
+        return None
 
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
@@ -219,7 +194,7 @@ class Model(object):
             old_epoch = epoch
 
         # Save model when done training
-        self.save_checkpoint()
+        #self.save_checkpoint()
 
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
@@ -231,7 +206,7 @@ class Model(object):
                           {self._input: batch_input,
                            self._target: batch_label})
 
-        self.save_checkpoint()
+        #self.save_checkpoint()
         return self._session.run(self.error,
                                  feed_dict={self._input: batch_input,
                                             self._target: batch_label})
@@ -239,7 +214,7 @@ class Model(object):
 def main():
     """ A main method that creates the model and starts training it """
     model = Model(tf.InteractiveSession())
-    model.train()
+    #model.train()
     model.validate()
 
 if __name__ == "__main__":
