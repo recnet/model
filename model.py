@@ -58,7 +58,8 @@ class Model(object):
 
         self.build_graph()
         with tf.device("/cpu:0"):
-            self.data = data.Data(data_path="./data/", verbose=True)
+            self.data = data.Data(data_path="./data/", verbose=True,
+                                  vocab_size=self.vocabulary_size)
             self.load_checkpoint()
 
     def build_graph(self):
