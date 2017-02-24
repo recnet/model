@@ -82,4 +82,7 @@ def label_vector(users, dic, max_users):
     for user in users:
         if user in dic:
             vector[dic[user]] = 1
+        else:
+            # If unkown user, set user UNK = 1
+            vector[0] = 1
     return vector
