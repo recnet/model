@@ -30,8 +30,6 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-import helper
-import numpy as np
 import data
 
 CKPT_PATH = "checkpoints/model.ckpt"
@@ -41,13 +39,13 @@ class Model(object):
     def __init__(self, session):
         self._session = session
         self.vocabulary_size = 50000
-        self.learning_rate = 0.3
-        self.embedding_size = 165
+        self.learning_rate = 0.5
+        self.embedding_size = 100
         self.max_title_length = 30
         self.lstm_neurons = 200
         self.user_count = 13000
         self.batch_size = 25
-        self.training_epochs = 2
+        self.training_epochs = 5
         self.users_to_select = 2
         # Will be set in build_graph
         self._input = None
@@ -60,7 +58,7 @@ class Model(object):
 
         self.build_graph()
         with tf.device("/cpu:0"):
-            self.data = data.Data(data_path="./data/top5/", verbose=True)
+            self.data = data.Data(data_path="./data/", verbose=True)
             self.load_checkpoint()
 
     def build_graph(self):
@@ -117,10 +115,18 @@ class Model(object):
             self.learning_rate).minimize(cross_entropy)
         self.error = cross_entropy
 
-        self.precision = tf.metrics.precision(self._target, self.softmax)
+        # Cast a tensor to booleans, where top k are True, else False
+        top_k_to_bool = lambda x: tf.greater_equal(
+            x, tf.reduce_min(
+                tf.nn.top_k(x, k=self.users_to_select)[0]))
+
+        # Convert all probibalistic predictions to discrete predictions
+        self.predictions = tf.map_fn(top_k_to_bool, self.softmax, dtype=tf.bool)
+        self.precision = tf.metrics.precision(self._target, self.predictions)
 
         # Last step
-        self._init_op = tf.global_variables_initializer()
+        self._init_op = tf.group(tf.global_variables_initializer(),
+                                 tf.local_variables_initializer())
         self.saver = tf.train.Saver()
 
     def load_checkpoint(self):
@@ -141,11 +147,11 @@ class Model(object):
         print("Starting validation...")
         val_data, val_labels = self.data.get_validation(self.max_title_length, self.user_count)
 
-        res = self._session.run(self.precision, {self._input: val_data, self._target: val_labels})
+        _, prec = self._session.run(self.precision,
+                                    feed_dict={self._input: val_data,
+                                               self._target: val_labels})
 
-
-        print(res)
-        print("Precision: {:%}")
+        print("Precision: {:%}".format(prec))
         return None
 
     def validate_batch(self):
@@ -190,11 +196,12 @@ class Model(object):
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
                 print("Epoch complete...")
+                self.save_checkpoint()
                 self.validate()
             old_epoch = epoch
 
         # Save model when done training
-        #self.save_checkpoint()
+        self.save_checkpoint()
 
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
@@ -206,7 +213,6 @@ class Model(object):
                           {self._input: batch_input,
                            self._target: batch_label})
 
-        #self.save_checkpoint()
         return self._session.run(self.error,
                                  feed_dict={self._input: batch_input,
                                             self._target: batch_label})
@@ -214,7 +220,7 @@ class Model(object):
 def main():
     """ A main method that creates the model and starts training it """
     model = Model(tf.InteractiveSession())
-    #model.train()
+    model.train()
     model.validate()
 
 if __name__ == "__main__":
