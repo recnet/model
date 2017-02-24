@@ -38,7 +38,7 @@ class Model(object):
     """ A model representing our neural network """
     def __init__(self, session):
         self._session = session
-        self.vocabulary_size = 50000
+        self.vocabulary_size = 100000
         self.learning_rate = 0.5
         self.embedding_size = 100
         self.max_title_length = 30
@@ -58,7 +58,8 @@ class Model(object):
 
         self.build_graph()
         with tf.device("/cpu:0"):
-            self.data = data.Data(data_path="./data/", verbose=True)
+            self.data = data.Data(data_path="./data/", verbose=True,
+                                  vocab_size=self.vocabulary_size)
             self.load_checkpoint()
 
     def build_graph(self):
@@ -135,6 +136,7 @@ class Model(object):
         if all([os.path.isfile(file) for file in checkpoint_files]) \
            and checkpoint_files:
             self.saver.restore(self._session, CKPT_PATH)
+            self._session.run(tf.local_variables_initializer())
         else:
             self._session.run(self._init_op)
 
