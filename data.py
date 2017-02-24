@@ -99,6 +99,15 @@ class Data(object):
         self.percent_of_epoch = self._current_train_index / self.train_size
         return batch_x, batch_y
 
+    def get_validation(self, title_length, user_count):
+        """ Get the whole validation set in a vectorized form """
+        old_ind = self._current_valid_index
+        self._current_valid_index = 0
+        batch_x, batch_y = self.next_valid_batch(title_length, user_count,
+                                                 self.valid_size)
+        self._current_valid_index = old_ind
+        return batch_x, batch_y
+
     def next_valid_batch(self, title_length, user_count,
                          batch_size=DEFAULT_BATCH_SIZE):
         """ Get the next batch of validation data """
