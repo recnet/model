@@ -65,6 +65,7 @@ def create_matrix(dictionary):
 def get_indicies(sentence, dictionary, max_words):
     """ Turns a sentence into a vector of word IDs """
     # This assumes that the sentence is pre-processed as an array of words
+    sentence = sentence.split()
     result = [0] * max_words
     for i, word in enumerate(sentence):
         if i > max_words-1:
