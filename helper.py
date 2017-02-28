@@ -67,6 +67,9 @@ def get_indicies(sentence, dictionary, max_words):
     # This assumes that the sentence is pre-processed as an array of words
     sentence = sentence.split()
     result = [0] * max_words
+    sentence_len = len(sentence)
+    if sentence_len < max_words:
+        return pad(sentence, dictionary, max_words)
     for i, word in enumerate(sentence):
         if i > max_words-1:
             return result
@@ -74,6 +77,20 @@ def get_indicies(sentence, dictionary, max_words):
             result[i] = dictionary[word]
         else:
             result[i] = 0
+    return result
+
+
+def pad(sentence, dictionary, max_words):
+    result = [0] * max_words
+    sentence_len = len(sentence)
+    for i, word in enumerate(sentence):
+        if max_words - sentence_len + i > max_words:
+            # if i > max_words-1:
+            return result
+        if word in dictionary:
+            result[max_words - sentence_len + i] = dictionary[word]
+        else:
+            result[max_words - sentence_len + i] = 0
     return result
 
 def label_vector(users, dic, max_users):
