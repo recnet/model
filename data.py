@@ -32,7 +32,6 @@ import helper
 
 FILE_TRAINING    = "training_data_top_n_single.csv"
 FILE_VALIDATION = "validation_data_top_n_single.csv"
-
 FILE_TESTING = "testing_data_top_n.csv"
 DEFAULT_BATCH_SIZE = 1
 DEFAULT_VOCAB_SIZE = 50000
@@ -47,6 +46,7 @@ class Data(object):
         self._verbose = verbose
         self._current_train_index = 0
         self._current_valid_index = 0
+        self._current_test_index = 0
         self.completed_training_epochs = 0
         self.percent_of_epoch = 0.0
         self._read_data()
@@ -146,3 +146,37 @@ class Data(object):
         """ Calculates how many training iterations to do for num_epochs
         number of epochs with a batch size of batch_size """
         return range((self.train_size*num_epochs)//batch_size)
+
+    def get_testing(self, title_length, user_count):
+        """ Get the whole validation set in a vectorized form """
+        old_ind = self._current_test_index
+        self._current_test_index = 0
+        batch_x, batch_y = self.next_testing_batch(title_length, user_count,
+                                                 self.test_size)
+        print('test size ', len(batch_x))
+        self._current_test_index = old_ind
+        return batch_x, batch_y
+
+    def next_testing_batch(self, title_length, user_count,
+                         batch_size=DEFAULT_BATCH_SIZE):
+        """ Get the next batch of validation data """
+        batch_x = []
+        batch_y = []
+        for _ in range(0, batch_size):
+            sentence = self.test_data[self._current_test_index]
+            label = self.test_labels[self._current_test_index]
+
+            self._current_test_index += 1
+
+            # Support multiple epochs
+            if self._current_test_index >= self.test_size:
+                self._current_test_index = 0
+
+            # Turn sentences and labels into vectors
+            sentence_vec = helper.get_indicies(sentence,
+                                               self.word_dict, title_length)
+            label_vec = helper.label_vector(label.split(), self.users_dict,
+                                            user_count)
+            batch_x.append(sentence_vec)
+            batch_y.append(label_vec)
+        return batch_x, batch_y
