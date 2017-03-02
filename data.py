@@ -27,16 +27,18 @@ A module for handling training, validation and test data for the ANN model
 import csv_reader
 import helper
 
-FILE_TRAINING = "training_data_top_n.csv"
-FILE_VALIDATION = "validation_data_top_n.csv"
+FILE_TRAINING    = "training_data_top_n_single.csv"
+FILE_VALIDATION = "validation_data_top_n_single.csv"
+
 FILE_TESTING = "testing_data_top_n.csv"
 DEFAULT_BATCH_SIZE = 1
 DEFAULT_VOCAB_SIZE = 50000
 
 class Data(object):
     """ A class for getting handling data """
-    def __init__(self, data_path="./data/", verbose=False,
+    def __init__(self,user_count, data_path="./data/", verbose=False,
                  vocab_size=DEFAULT_VOCAB_SIZE):
+        self.users_count = user_count
         self._data_path = data_path
         self._vocab_size = vocab_size
         self._verbose = verbose
@@ -75,7 +77,7 @@ class Data(object):
         _, _, self.word_dict, self.rev_dict = \
             helper.build_dataset(vocab, vocabulary_size=self._vocab_size)
         _, _, self.users_dict, self.rev_users_dict = \
-        helper.build_dataset(users, vocabulary_size=self._vocab_size)
+        helper.build_dataset(users, vocabulary_size=self.users_count)
 
     def next_train_batch(self, title_length, user_count,
                          batch_size=DEFAULT_BATCH_SIZE):
