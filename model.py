@@ -20,7 +20,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-#==============================================================================
+# ==============================================================================
 """ A RNN model for predicting which people would like a text
 
 The model is created as part of the bachelor's thesis
@@ -34,8 +34,10 @@ import data
 
 CKPT_PATH = "checkpoints/model.ckpt"
 
+
 class Model(object):
     """ A model representing our neural network """
+
     def __init__(self, session):
         self._session = session
         self.vocabulary_size = 100000
@@ -46,7 +48,7 @@ class Model(object):
         self.user_count = 13000
         self.batch_size = 25
         self.training_epochs = 5
-        self.users_to_select = 2
+        self.users_to_select = 1 # 2
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -58,25 +60,21 @@ class Model(object):
 
         self.build_graph()
         with tf.device("/cpu:0"):
-            self.data = data.Data(data_path="./data/", verbose=True,
+            self.data = data.Data(user_count=self.user_count, data_path="./data/", verbose=True,
                                   vocab_size=self.vocabulary_size)
             self.load_checkpoint()
 
     def build_graph(self):
-        """ Builds the model in tensorflow """
-
-        print("Building graph...")
-        # Placeholders for input and output
         self._input = tf.placeholder(tf.int32,
                                      [None, self.max_title_length],
                                      name="input")
+
         self._target = tf.placeholder(tf.int32,
                                       [None, self.user_count],
                                       name="target")
 
-        # This is the first, and input, layer of our network
-        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons,
-                                             state_is_tuple=True)
+        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
+
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
             tf.random_uniform(
@@ -86,6 +84,7 @@ class Model(object):
 
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._input)
+
 
         # Run the LSTM layer with the embedded input
         outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
@@ -98,7 +97,7 @@ class Model(object):
             [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
-                                      name="weights")
+            name="weights")
 
         softmax_bias = tf.Variable(tf.random_normal([self.user_count],
                                                     stddev=0.35,
@@ -112,8 +111,7 @@ class Model(object):
         error = tf.nn.softmax_cross_entropy_with_logits(labels=self._target,
                                                         logits=logits)
         cross_entropy = tf.reduce_mean(error)
-        self.train_op = tf.train.GradientDescentOptimizer(
-            self.learning_rate).minimize(cross_entropy)
+        self.train_op = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(cross_entropy)
         self.error = cross_entropy
 
         # Cast a tensor to booleans, where top k are True, else False
@@ -134,7 +132,7 @@ class Model(object):
         """ Loads any exisiting trained model """
         checkpoint_files = glob.glob(CKPT_PATH + "*")
         if all([os.path.isfile(file) for file in checkpoint_files]) \
-           and checkpoint_files:
+                and checkpoint_files:
             self.saver.restore(self._session, CKPT_PATH)
             self._session.run(tf.local_variables_initializer())
         else:
@@ -160,7 +158,7 @@ class Model(object):
         """ Validates a batch of data and returns cross entropy error """
         with tf.device("/cpu:0"):
             data_batch, label_batch = self.data.next_valid_batch \
-            (self.max_title_length, self.user_count, self.batch_size)
+                (self.max_title_length, self.user_count, self.batch_size)
 
         return self._session.run(self.error,
                                  feed_dict={self._input: data_batch,
@@ -169,7 +167,6 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-
 
         error_sum = 0
         val_error_sum = 0
@@ -187,13 +184,13 @@ class Model(object):
             val_error_sum += validation_error
 
             # Don't validate so often
-            if i % (self.data.train_size//self.batch_size//10) == 0 and i:
-                avg_val_err = val_error_sum/i
-                avg_trn_err = error_sum/i
+            if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
+                avg_val_err = val_error_sum / i
+                avg_trn_err = error_sum / i
                 print("Training... Epoch: {:d}, Done: {:%}" \
-                    .format(epoch, done))
+                      .format(epoch, done))
                 print("Validation error: {:f} ({:f}), Training error {:f} ({:f})" \
-                    .format(validation_error, avg_val_err, error, avg_trn_err))
+                      .format(validation_error, avg_val_err, error, avg_trn_err))
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
@@ -209,7 +206,7 @@ class Model(object):
         """ Trains for one batch and returns cross entropy error """
         with tf.device("/cpu:0"):
             batch_input, batch_label = self.data.next_train_batch \
-            (self.max_title_length, self.user_count, self.batch_size)
+                (self.max_title_length, self.user_count, self.batch_size)
 
         self._session.run(self.train_op,
                           {self._input: batch_input,
@@ -219,11 +216,13 @@ class Model(object):
                                  feed_dict={self._input: batch_input,
                                             self._target: batch_label})
 
+
 def main():
     """ A main method that creates the model and starts training it """
     model = Model(tf.InteractiveSession())
     model.train()
     model.validate()
+
 
 if __name__ == "__main__":
     main()
