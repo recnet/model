@@ -38,6 +38,7 @@ def read(file_path, data_column, label_column):
                 col = row[elem]
                 #replaces each number with NUMTOKEN
                 col = re.sub('\d+', 'NUMTOKEN', col)
+                col = re.sub('\s+NUMTOEKN\s+', ' NUMTOKEN ', col)
 
                 for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%']:
                     col = str(col)
