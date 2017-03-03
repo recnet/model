@@ -27,6 +27,9 @@ A module for handling training, validation and test data for the ANN model
 import csv_reader
 import helper
 
+#FILE_TRAINING    = "arti.csv"
+#FILE_VALIDATION = "arti_val.csv"
+
 FILE_TRAINING    = "training_data_top_n_single.csv"
 FILE_VALIDATION = "validation_data_top_n_single.csv"
 

@@ -45,10 +45,10 @@ class Model(object):
         self.embedding_size = 100
         self.max_title_length = 30
         self.lstm_neurons = 200
-        self.user_count = 13000
+        self.user_count = 6
         self.batch_size = 25
         self.training_epochs = 5
-        self.users_to_select = 1 # 2
+        self.users_to_select = 1
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -89,6 +89,7 @@ class Model(object):
         # Run the LSTM layer with the embedded input
         outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
                                        dtype=tf.float64)
+
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
 
@@ -110,7 +111,9 @@ class Model(object):
         # Defne error function
         error = tf.nn.softmax_cross_entropy_with_logits(labels=self._target,
                                                         logits=logits)
+
         cross_entropy = tf.reduce_mean(error)
+
         self.train_op = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(cross_entropy)
         self.error = cross_entropy
 

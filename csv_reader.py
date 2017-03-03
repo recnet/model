@@ -22,6 +22,7 @@
 # SOFTWARE.
 #==============================================================================
 import csv
+import re
 
 def read(file_path, data_column, label_column):
     """ A function that reads the data and
@@ -35,7 +36,10 @@ def read(file_path, data_column, label_column):
             label = row[label_column]
             for elem in data_column:
                 col = row[elem]
-                for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';']:
+                #replaces each number with NUMTOKEN
+                col = re.sub('\d+', 'NUMTOKEN', col)
+
+                for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%']:
                     col = str(col)
                     col = col.replace(character, '')
                 if col:
