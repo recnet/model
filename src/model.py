@@ -30,26 +30,17 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-import data
+import src.data as data
+from src.networkconfig import yamlconfig as networkconfig
+from definitions import CHECKPOINTS_PATH
 
-CKPT_PATH = "checkpoints/model.ckpt"
 
-
+# TODO Separera checkpoints ut ur modell klassen
 class Model(object):
-    """ A model representing our neural network """
 
-    def __init__(self, session):
-        self._session = session
-        self.vocabulary_size = 15000
-        self.learning_rate = 0.15
-        self.embedding_size = 128
-        self.max_title_length = 25
-        self.lstm_neurons = 200
-        self.user_count = 6
-        self.batch_size = 25
-        self.training_epochs = 5
-        self.users_to_select = 1
-        # Will be set in build_graph
+    def __init__(self, config):
+        self.config = config
+        self._session = tf.InteractiveSession()
         self._input = None
         self._target = None
         self.softmax = None
@@ -60,31 +51,30 @@ class Model(object):
 
         self.build_graph()
         with tf.device("/cpu:0"):
-            self.data = data.Data(user_count=self.user_count, data_path="./data/", verbose=True,
-                                  vocab_size=self.vocabulary_size)
+            self.data = data.Data(config)
             self.load_checkpoint()
 
     def build_graph(self):
         self._input = tf.placeholder(tf.int32,
-                                     [None, self.max_title_length],
+                                     [None, self.config['max_title_length']],
                                      name="input")
 
         self._target = tf.placeholder(tf.int32,
-                                      [None, self.user_count],
+                                      [None, self.config['user_count']],
                                       name="target")
 
-        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
+        lstm_layer = tf.contrib.rnn.LSTMCell(self.config['lstm_neurons'], state_is_tuple=True)
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
             tf.random_uniform(
-                [self.vocabulary_size, self.embedding_size],
+                [self.config['vocabulary_size'], self.config['embedding_size']],
                 -1.0, 1.0, dtype=tf.float64),
             name="embeddings")
 
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._input)
-        # Run the LSTM layer with the embedded input
+       # Run the LSTM layer with the embedded input
         outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
                                        dtype=tf.float64)
 
@@ -92,12 +82,12 @@ class Model(object):
         output = outputs[-1]
         # Feed the output of the LSTM layer to a softmax layer
         softmax_weights = tf.Variable(tf.random_normal(
-            [self.lstm_neurons, self.user_count],
+            [self.config['lstm_neurons'], self.config['user_count']],
             stddev=0.35,
             dtype=tf.float64),
             name="weights")
 
-        softmax_bias = tf.Variable(tf.random_normal([self.user_count],
+        softmax_bias = tf.Variable(tf.random_normal([self.config['user_count']],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
                                    name="biases")
@@ -110,15 +100,17 @@ class Model(object):
                                                         logits=logits)
 
         cross_entropy = tf.reduce_mean(error)
-        self.error = cross_entropy
 
-        self.train_op = tf.train.AdamOptimizer(
-            self.learning_rate).minimize(cross_entropy)
+        self.train_op = tf \
+            .train \
+            .AdamOptimizer(self.config['learning_rate']) \
+            .minimize(cross_entropy)
+
+        self.error = cross_entropy
 
         # Cast a tensor to booleans, where top k are True, else False
         top_k_to_bool = lambda x: tf.greater_equal(
-            x, tf.reduce_min(
-                tf.nn.top_k(x, k=self.users_to_select)[0]))
+            x, tf.reduce_min(tf.nn.top_k(x, k=self.config['users_to_select'])[0]))
 
         # Convert all probibalistic predictions to discrete predictions
         self.predictions = tf.map_fn(top_k_to_bool, self.softmax, dtype=tf.bool)
@@ -143,21 +135,22 @@ class Model(object):
 
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
-        checkpoint_files = glob.glob(CKPT_PATH + "*")
+        checkpoint_files = glob.glob(os.path.join(CHECKPOINTS_PATH, "*"))
         if all([os.path.isfile(file) for file in checkpoint_files]) \
                 and checkpoint_files:
-            self.saver.restore(self._session, CKPT_PATH)
+            self.saver.restore(self._session, CHECKPOINTS_PATH)
             self._session.run(tf.local_variables_initializer())
         else:
             self._session.run(self._init_op)
 
-    def save_checkpoint(self, path=CKPT_PATH):
+    def save_checkpoint(self, path=os.path.join(CHECKPOINTS_PATH, "models.ckpt")):
         """ Saves the model to a file """
         self.saver.save(self._session, path)
 
     def validate(self, epoch):
         """ Validates the model and returns the final precision """
         print("Starting validation...")
+
         val_data, val_labels = self.data.get_validation(self.max_title_length, self.user_count)
         summary = self._session.run(self.prec_sum, {self._input: val_data, self._target: val_labels})
         self.valid_writer.add_summary(summary, epoch)
@@ -176,13 +169,14 @@ class Model(object):
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
         with tf.device("/cpu:0"):
-            data_batch, label_batch = self.data.next_valid_batch \
-                (self.max_title_length, self.user_count, self.batch_size)
+            data_batch, label_batch = self.data.next_valid_batch()
 
         return self._session.run(self.error,
                                  feed_dict={self._input: data_batch,
                                             self._target: label_batch})
 
+    # TODO funktionen gör alldeles för mycket,
+    # dela upp utskrift, beräkning och träning
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
@@ -190,8 +184,9 @@ class Model(object):
         val_error_sum = 0
         old_epoch = 0
         # Train for a specified amount of epochs
-        for _ in self.data.for_n_train_epochs(self.training_epochs,
-                                              self.batch_size):
+
+        for i in self.data.for_n_train_epochs(self.config['training_epochs'],
+                                              self.config['batch_size']):
             # Debug print out
             epoch = self.data.completed_training_epochs
             self.train_batch()
@@ -201,15 +196,14 @@ class Model(object):
             # val_error_sum += validation_error
 
             # Don't validate so often
-            # if i % (self.data.train_size//self.batch_size//10) == 0 and i:
-            #     avg_val_err = val_error_sum/i
-            #     avg_trn_err = error_sum/i
-            #     print("Training... Epoch: {:d}, Done: {:%}" \
-            #         .format(epoch, done))
-            #     print("Training error {:f} ({:f})" \
-            #           .format( error, avg_trn_err))
-                # print("Validation error: {:f} ({:f}), Training error {:f} ({:f})" \
-                #     .format(validation_error, avg_val_err, error, avg_trn_err))
+#            if i % (self.data.train_size // self.config['batch_size'] // 10) == 0 and i:
+#                 avg_val_err = val_error_sum / i
+#                 avg_trn_err = error_sum / i
+#                 print("Training... Epoch: {:d}, Done: {:%}" \
+#                       .format(epoch, done))
+#                 print("Validation error: {:f} ({:f}), Training error {:f} ({:f})" \
+#                       .format(validation_error, avg_val_err, error, avg_trn_err))
+#
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
@@ -224,8 +218,8 @@ class Model(object):
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
         with tf.device("/cpu:0"):
-            batch_input, batch_label = self.data.next_train_batch \
-                (self.max_title_length, self.user_count, self.batch_size)
+            batch_input, batch_label = self.data.next_train_batch()
+
         self._session.run(self.train_op,
                           {self._input: batch_input,
                            self._target: batch_label})
@@ -237,8 +231,8 @@ class Model(object):
 
 def main():
     """ A main method that creates the model and starts training it """
-    model = Model(tf.InteractiveSession())
-    model.validate(-1)
+
+    model = Model(networkconfig)
     model.train()
     model.train_writer.close()
     model.valid_writer.close()
