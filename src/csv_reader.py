@@ -50,8 +50,8 @@ class CsvReader(Enum):
     @staticmethod
     def _process(text):
         # replaces each number with NUMTOKEN
-        text_with_token = re.sub('\s+NUMTOEKN\s+', ' NUMTOKEN ',
-                                 re.sub('\d+', 'NUMTOKEN', text))
+        text_with_token = re.sub('\s+NUMTOKEN\s+', ' NUMTOKEN ',
+                                 re.sub('\d+', ' NUMTOKEN ', text))
 
         for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%']:
             text_without_special = text_with_token.replace(character, '')
