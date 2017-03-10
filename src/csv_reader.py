@@ -24,31 +24,33 @@
 from enum import Enum
 
 import re
-from src.config import cfg
 from definitions import DATASETS_PATH
 import pandas as pd
 import os
 
 
-class CsvReader(Enum):
+class Dataenum(Enum):
     TESTING = "testing_data"
     TRAINING = "training_data"
     VALIDATION = "validation_data"
 
-    @staticmethod
-    def readfile(datatype):
-        filepath = os.path.join(DATASETS_PATH, cfg['csv'][datatype.value])
-        training_data = pd.read_csv(filepath, sep=",", encoding=cfg['csv']['encoding'])
-        return training_data['headlines'].tolist(), training_data['users'].tolist(),
 
-    @staticmethod
-    def get_data(datatype):
-        data, label = CsvReader.readfile(datatype)
-        processed = [CsvReader._process(text) for text in data]
+class CsvReader:
+    def __init__(self, netcfg):
+        self.netcfg = netcfg
+        self.encoding = 'UTF-8'
+
+    def readfile(self, datatype):
+         filepath = os.path.join(DATASETS_PATH, self.netcfg[datatype.value])
+         training_data = pd.read_csv(filepath, sep=",", encoding=self.encoding)
+         return training_data['headlines'].tolist(), training_data['users'].tolist(),
+
+    def get_data(self, datatype):
+        data, label = self.readfile(datatype)
+        processed = [self._process(text) for text in data]
         return processed, label
 
-    @staticmethod
-    def _process(text):
+    def _process(self, text):
         # replaces each number with NUMTOKEN
         text_with_token = re.sub('\s+NUMTOKEN\s+', ' NUMTOKEN ',
                                  re.sub('\d+', ' NUMTOKEN ', text))
