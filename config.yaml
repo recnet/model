@@ -1,9 +1,3 @@
-csv:
-  encoding: 'UTF-8'
-  validation_data: 'validation_data_top_n_single.csv'
-  training_data: 'training_data_top_n_single.csv'
-  testing_data: 'testing_data_top_n_single.csv'
-
 data:
   path: 'resources/datasets/'
 
@@ -17,4 +11,7 @@ network:
     batch_size: 25
     training_epochs: 2
     users_to_select: 1
+    validation_data: 'validation_data_top_n_single.csv'
+    training_data: 'training_data_top_n_single.csv'
+    testing_data: 'testing_data_top_n_single.csv'
 

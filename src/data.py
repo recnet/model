@@ -25,10 +25,9 @@
 A module for handling training, validation and test data for the ANN model
 """
 
-from src.csv_reader import CsvReader as reader
 import src.helper as helper
 import logging
-
+from src.csv_reader import CsvReader, Dataenum
 
 class Data(object):
     def __init__(self, networkconfig):
@@ -41,6 +40,7 @@ class Data(object):
         self.title_length = networkconfig['max_title_length']
         self.user_count = networkconfig['users_to_select']
         self.batch_size = self.netcfg['batch_size']
+        self.reader = CsvReader(networkconfig)
         self._read_data()
         self._build_dict()
 
@@ -48,17 +48,17 @@ class Data(object):
         """ Reads all the data from specified path """
         logging.debug("Reading training data...")
 
-        self.train_data, self.train_labels = reader.get_data(reader.TRAINING)
+        self.train_data, self.train_labels = self.reader.get_data(Dataenum.TRAINING)
         self.train_size = len(self.train_data)
 
         logging.debug("Reading validation data...")
 
-        self.validation_data, self.valid_labels = reader.get_data(reader.VALIDATION)
+        self.validation_data, self.valid_labels = self.reader.get_data(Dataenum.VALIDATION)
         self.validation_size = len(self.validation_data)
 
         logging.debug("Reading testing data...")
 
-        self.test_data, self.test_labels = reader.get_data(reader.TESTING)
+        self.test_data, self.test_labels = self.reader.get_data(Dataenum.TESTING)
         self.test_size = len(self.test_data)
 
     def _build_dict(self):
