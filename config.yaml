@@ -15,6 +15,6 @@ network:
     max_title_length: 30
     lstm_neurons: 200
     batch_size: 25
-    training_epochs: 5
+    training_epochs: 2
     users_to_select: 1
 

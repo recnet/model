@@ -37,7 +37,6 @@ from definitions import CHECKPOINTS_PATH
 
 # TODO Separera checkpoints ut ur modell klassen
 class Model(object):
-
     def __init__(self, config):
         self.config = config
         self._session = tf.InteractiveSession()
@@ -49,6 +48,16 @@ class Model(object):
         self._init_op = None
         self.saver = None
 
+        self.vocabulary_size = config['vocabulary_size']
+        self.user_count = config['user_count']
+        self.learning_rate = config['learning_rate']
+        self.embedding_size = config['embedding_size']
+        self.max_title_length = config['max_title_length']
+        self.lstm_neurons = config['lstm_neurons']
+        self.batch_size = config['batch_size']
+        self.training_epochs = config['training_epochs']
+        self.users_to_select = config['users_to_select']
+
         self.build_graph()
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
@@ -56,25 +65,25 @@ class Model(object):
 
     def build_graph(self):
         self._input = tf.placeholder(tf.int32,
-                                     [None, self.config['max_title_length']],
+                                     [None, self.max_title_length],
                                      name="input")
 
         self._target = tf.placeholder(tf.int32,
-                                      [None, self.config['user_count']],
+                                      [None, self.user_count],
                                       name="target")
 
-        lstm_layer = tf.contrib.rnn.LSTMCell(self.config['lstm_neurons'], state_is_tuple=True)
+        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
             tf.random_uniform(
-                [self.config['vocabulary_size'], self.config['embedding_size']],
-                -1.0, 1.0, dtype=tf.float64),
+                [self.vocabulary_size, self.embedding_size],
+                - 1.0, 1.0, dtype=tf.float64),
             name="embeddings")
 
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._input)
-       # Run the LSTM layer with the embedded input
+        # Run the LSTM layer with the embedded input
         outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
                                        dtype=tf.float64)
 
@@ -82,12 +91,12 @@ class Model(object):
         output = outputs[-1]
         # Feed the output of the LSTM layer to a softmax layer
         softmax_weights = tf.Variable(tf.random_normal(
-            [self.config['lstm_neurons'], self.config['user_count']],
+            [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
             name="weights")
 
-        softmax_bias = tf.Variable(tf.random_normal([self.config['user_count']],
+        softmax_bias = tf.Variable(tf.random_normal([self.user_count],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
                                    name="biases")
@@ -103,18 +112,19 @@ class Model(object):
 
         self.train_op = tf \
             .train \
-            .AdamOptimizer(self.config['learning_rate']) \
+            .AdamOptimizer(self.learning_rate) \
             .minimize(cross_entropy)
 
         self.error = cross_entropy
 
         # Cast a tensor to booleans, where top k are True, else False
         top_k_to_bool = lambda x: tf.greater_equal(
-            x, tf.reduce_min(tf.nn.top_k(x, k=self.config['users_to_select'])[0]))
+            x, tf.reduce_min(tf.nn.top_k(x, k=self.users_to_select)[0]))
 
         # Convert all probibalistic predictions to discrete predictions
         self.predictions = tf.map_fn(top_k_to_bool, self.softmax, dtype=tf.bool)
-        self.precision = tf.metrics.precision(self._target, self.predictions)#Need to create two different, because they have internal memory of old values
+        self.precision = tf.metrics.precision(self._target,
+                                              self.predictions)  # Need to create two different, because they have internal memory of old values
         self.precision_copy = tf.metrics.precision(self._target, self.predictions)
 
         # Last step
@@ -123,7 +133,8 @@ class Model(object):
 
         self.error_sum = tf.summary.scalar('cross_entropy', self.error)
 
-        self.prec_sum = tf.summary.scalar('precision', self.precision[1]) #Need to create two different, because they have internal memory of old values
+        self.prec_sum = tf.summary.scalar('precision', self.precision[
+            1])  # Need to create two different, because they have internal memory of old values
         self.prec_sum_copy = tf.summary.scalar('precision', self.precision_copy[1])
 
         # Last step
@@ -131,7 +142,7 @@ class Model(object):
         self.train_writer = tf.summary.FileWriter(log_dir + '/train')
         self.valid_writer = tf.summary.FileWriter(log_dir + '/valid')
 
-        # self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver()
 
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
@@ -151,16 +162,16 @@ class Model(object):
         """ Validates the model and returns the final precision """
         print("Starting validation...")
 
-        val_data, val_labels = self.data.get_validation(self.max_title_length, self.user_count)
+        val_data, val_labels = self.data.get_validation()
         summary = self._session.run(self.prec_sum, {self._input: val_data, self._target: val_labels})
         self.valid_writer.add_summary(summary, epoch)
         errSum = self._session.run(self.error_sum, {self._input: val_data, self._target: val_labels})
         self.valid_writer.add_summary(errSum, epoch)
 
-        train_data, train_labels = self.data.get_testing(self.max_title_length, self.user_count) #HUGE NOTE: in the data class, change testing file to be the same as training file to compare validation vs training dataset :)
+        train_data, train_labels = self.data.get_testing()  # HUGE NOTE: in the data class, change testing file to be the same as training file to compare validation vs training dataset :)
         sum = self._session.run(self.prec_sum_copy,
-                                     {self._input: train_data,
-                                      self._target: train_labels})
+                                {self._input: train_data,
+                                 self._target: train_labels})
         self.train_writer.add_summary(sum, epoch)
         errSum = self._session.run(self.error_sum, {self._input: train_data, self._target: train_labels})
         self.train_writer.add_summary(errSum, epoch)
@@ -185,8 +196,8 @@ class Model(object):
         old_epoch = 0
         # Train for a specified amount of epochs
 
-        for i in self.data.for_n_train_epochs(self.config['training_epochs'],
-                                              self.config['batch_size']):
+        for i in self.data.for_n_train_epochs(self.training_epochs,
+                                              self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
             self.train_batch()
@@ -196,14 +207,14 @@ class Model(object):
             # val_error_sum += validation_error
 
             # Don't validate so often
-#            if i % (self.data.train_size // self.config['batch_size'] // 10) == 0 and i:
-#                 avg_val_err = val_error_sum / i
-#                 avg_trn_err = error_sum / i
-#                 print("Training... Epoch: {:d}, Done: {:%}" \
-#                       .format(epoch, done))
-#                 print("Validation error: {:f} ({:f}), Training error {:f} ({:f})" \
-#                       .format(validation_error, avg_val_err, error, avg_trn_err))
-#
+            #            if i % (self.data.train_size // self.config['batch_size'] // 10) == 0 and i:
+            #                 avg_val_err = val_error_sum / i
+            #                 avg_trn_err = error_sum / i
+            #                 print("Training... Epoch: {:d}, Done: {:%}" \
+            #                       .format(epoch, done))
+            #                 print("Validation error: {:f} ({:f}), Training error {:f} ({:f})" \
+            #                       .format(validation_error, avg_val_err, error, avg_trn_err))
+            #
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
@@ -212,8 +223,8 @@ class Model(object):
                 self.validate(old_epoch)
             old_epoch = epoch
 
-        # Save model when done training
-        # self.save_checkpoint()
+            # Save model when done training
+            # self.save_checkpoint()
 
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
@@ -228,6 +239,7 @@ class Model(object):
         return self._session.run(self.error,
                                  feed_dict={self._input: batch_input,
                                             self._target: batch_label})
+
 
 def main():
     """ A main method that creates the model and starts training it """
