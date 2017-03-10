@@ -35,6 +35,7 @@ class Data(object):
         self.netcfg = networkconfig
         self._current_train_index = 0
         self._current_valid_index = 0
+        self._current_test_index = 0
         self.completed_training_epochs = 0
         self.percent_of_epoch = 0.0
         self.title_length = networkconfig['max_title_length']
@@ -109,7 +110,7 @@ class Data(object):
         """ Get the whole validation set in a vectorized form """
         old_ind = self._current_valid_index
         self._current_valid_index = 0
-        batch_x, batch_y = self.next_valid_batch(self.validation_size)
+        batch_x, batch_y = self.next_valid_batch()
         self._current_valid_index = old_ind
         return batch_x, batch_y
 
@@ -127,6 +128,39 @@ class Data(object):
             # Support multiple epochs
             if self._current_valid_index >= self.validation_size:
                 self._current_valid_index = 0
+
+            # Turn sentences and labels into vectors
+            sentence_vec = helper.get_indicies(sentence,
+                                               self.word_dict,
+                                               self.netcfg['max_title_length'])
+
+            label_vec = helper.label_vector(label.split(), self.users_dict,
+                                            self.netcfg['user_count'])
+            batch_x.append(sentence_vec)
+            batch_y.append(label_vec)
+        return batch_x, batch_y
+
+    def get_testing(self):
+        """ Get the whole validation set in a vectorized form """
+        old_ind = self._current_test_index
+        self._current_test_index = 0
+        batch_x, batch_y = self.next_test_batch()
+        self._current_test_index = old_ind
+        return batch_x, batch_y
+
+    def next_test_batch(self):
+        """ Get the next batch of validation data """
+        batch_x = []
+        batch_y = []
+        for _ in range(0, self.netcfg['batch_size']):
+            sentence = self.test_data[self._current_test_index]
+            label = self.test_labels[self._current_test_index]
+
+            self._current_test_index += 1
+
+            # Support multiple epochs
+            if self._current_test_index >= self.test_size:
+                self._current_test_index = 0
 
             # Turn sentences and labels into vectors
             sentence_vec = helper.get_indicies(sentence,
