@@ -31,6 +31,7 @@ import glob
 import os.path
 import tensorflow as tf
 import src.data as data
+from src.writer import Writer
 from src.networkconfig import yamlconfig as networkconfig
 from definitions import CHECKPOINTS_PATH
 
@@ -57,6 +58,8 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
+
+
 
         self.build_graph()
         with tf.device("/cpu:0"):
@@ -243,8 +246,10 @@ class Model(object):
 
 def main():
     """ A main method that creates the model and starts training it """
-
-    model = Model(networkconfig)
+    writer = Writer()
+    writer.write(networkconfig)
+    first_config = 0
+    model = Model(networkconfig[first_config])
     model.train()
     model.train_writer.close()
     model.valid_writer.close()
