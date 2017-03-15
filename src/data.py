@@ -72,7 +72,7 @@ class Data(object):
             helper.build_dataset(vocab, vocabulary_size=self.netcfg['vocabulary_size'])
         _, _, self.users_dict, self.rev_users_dict = \
             helper.build_dataset(users, vocabulary_size=self.netcfg['user_count'])
-        print(self.users_dict)
+        # print(self.users_dict)
 
         # TODO Next train batch är i princip identisk med
         # next_valid_batch
