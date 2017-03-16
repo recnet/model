@@ -27,6 +27,7 @@ import re
 from definitions import DATASETS_PATH
 import os
 import csv
+import numpy as np
 
 
 class Dataenum(Enum):
@@ -66,3 +67,37 @@ class CsvReader:
                 data_full.append(data.strip(' ').strip(','))
                 label_full.append(label)
             return data_full, label_full
+
+def test_load_twitter(dimension_size = 25):
+    file_path = os.path.join(DATASETS_PATH, 'glove.twitter.27B.25d.txt')
+    with open(file_path, 'r', encoding='UTF-8') as csvfile:
+        reader = csv.reader(csvfile, delimiter=' ', quoting=csv.QUOTE_NONE)
+        print('tjena')
+        result = dict()
+        matrix = []
+
+        result['UNK'] = len(matrix)
+        matrix.append(np.random.rand(1, dimension_size).tolist())
+
+        for row in reader:
+            firstCol = row[0]
+            # if firstCol == '<unknown>': removing this because other dataset doesnt have unknown tag at all
+            #     # matrix.append(row[1:])
+            #     result['UNK'] = len(matrix)
+            #     matrix.append(np.random.uniform(0, 1, size=dimension_size))
+
+            if firstCol in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
+                continue
+
+            if firstCol[0] == '<': #some words are tokens for usernames like <user> or <caps> etc, ignore them.
+                continue
+            result[firstCol] = len(matrix)
+            matrix.append(row[1:])
+
+    return result, np.array(matrix)
+
+res, matrix = test_load_twitter()
+
+
+
+
