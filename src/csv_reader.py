@@ -25,7 +25,6 @@ from enum import Enum
 
 import re
 from definitions import DATASETS_PATH
-import pandas as pd
 import os
 import csv
 
@@ -41,31 +40,11 @@ class CsvReader:
         self.netcfg = netcfg
         self.encoding = 'UTF-8'
 
-    # def readfile(self, datatype):
-    #      filepath = os.path.join(DATASETS_PATH, self.netcfg[datatype.value])
-    #      training_data = pd.read_csv(filepath, sep=",", encoding=self.encoding)
-    #      return training_data['headlines'].tolist(), training_data['users'].tolist(),
-    #
-    # def get_data(self, datatype):
-    #     data, label = self.readfile(datatype)
-    #     processed = [self._process(text) for text in data]
-    #     return processed, label
-    #
-    # def _process(self, text):
-    #     # replaces each number with NUMTOKEN
-    #     text_with_token = re.sub('\s+NUMTOKEN\s+', ' NUMTOKEN ',
-    #                              re.sub('\d+', ' NUMTOKEN ', text))
-    #
-    #     for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%']:
-    #         text_without_special = text_with_token.replace(character, '')
-    #
-    #     return text_without_special
-
     def get_data(self, datatype, data_column=[0], label_column=1):
         """ A function that reads the data and
         corresponding label from a CSV file """
         file_path = os.path.join(DATASETS_PATH, self.netcfg[datatype.value])
-        with open(file_path, 'r', encoding='utf-8') as csvfile:
+        with open(file_path, 'r', encoding=self.encoding) as csvfile:
             reader = csv.reader(csvfile)
             data_full = []
             label_full = []
