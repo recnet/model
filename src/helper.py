@@ -65,19 +65,34 @@ def create_matrix(dictionary):
     matrix[0][0] = 0  # this will be kinda "default vec" for 'UNK'
     return matrix
 
-
 def get_indicies(sentence, dictionary, max_words):
     """ Turns a sentence into a vector of word IDs """
     # This assumes that the sentence is pre-processed as an array of words
     sentence = sentence.split()
     result = [0] * max_words
+    sentence_len = len(sentence)
+    if sentence_len < max_words:
+        return pad(sentence, dictionary, max_words)
     for i, word in enumerate(sentence):
-        if i > max_words - 1:
+        if i > max_words-1:
             return result
         if word in dictionary:
             result[i] = dictionary[word]
         else:
             result[i] = 0
+    return result
+
+
+def pad(sentence, dictionary, max_words):
+    result = [0] * max_words
+    sentence_len = len(sentence)
+    for i, word in enumerate(sentence):
+        if max_words - sentence_len + i > max_words:
+            return result
+        if word in dictionary:
+            result[max_words - sentence_len + i] = dictionary[word]
+        else:
+            result[max_words - sentence_len + i] = 0
     return result
 
 
