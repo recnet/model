@@ -7,7 +7,7 @@ inside name folder there will be a text file including parameters for the networ
 
 '''
 import os
-from definitions import TENSOR_DIR_TRAIN, TENSOR_DIR_VALID, LOGS_DIR
+from definitions import TENSOR_DIR_TRAIN, TENSOR_DIR_VALID, LOGS_DIR, CHECKPOINTS_DIR
 
 def build_structure(config):
     '''
@@ -19,12 +19,15 @@ def build_structure(config):
     dir_to_create = LOGS_DIR + '/' + type + '/' + name
     tensor_dir_train_to_create = dir_to_create + '/' + TENSOR_DIR_TRAIN
     tensor_dir_valid_to_create = dir_to_create + '/' + TENSOR_DIR_VALID
-    print(tensor_dir_train_to_create)
-    print(tensor_dir_valid_to_create)
+    checkpoings_dir_to_create = dir_to_create + '/' + CHECKPOINTS_DIR
+
     if not os.path.exists(tensor_dir_train_to_create):
         os.makedirs(tensor_dir_train_to_create)
 
     if not os.path.exists(tensor_dir_valid_to_create):
         os.makedirs(tensor_dir_valid_to_create)
+
+    if not os.path.exists(checkpoings_dir_to_create):
+        os.makedirs(checkpoings_dir_to_create)
 
     return dir_to_create

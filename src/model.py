@@ -32,7 +32,7 @@ import os.path
 import tensorflow as tf
 import src.data as data
 from src.networkconfig import yamlconfig as networkconfig
-from definitions import CHECKPOINTS_PATH, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
+from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
 from src.folder_builder import build_structure
 from src.writer import log_config
 
@@ -61,7 +61,10 @@ class Model(object):
         self.users_to_select = config['users_to_select']
 
         self.logging_dir = build_structure(config)
+        self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
         log_config(config) #Discuss if we should do this after, and somehow take "highest" precision from validation?
+        self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN)
+        self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
 
         self.build_graph()
         with tf.device("/cpu:0"):
@@ -142,24 +145,21 @@ class Model(object):
             1])  # Need to create two different, because they have internal memory of old values
         self.prec_sum_copy = tf.summary.scalar('precision', self.precision_copy[1])
 
-        # Last step
-        self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN)
-        self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
-
         self.saver = tf.train.Saver()
 
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
-        checkpoint_files = glob.glob(os.path.join(CHECKPOINTS_PATH, "*"))
+        checkpoint_files = glob.glob(os.path.join(self.checkpoints_dir, "*"))
         if all([os.path.isfile(file) for file in checkpoint_files]) \
                 and checkpoint_files:
-            self.saver.restore(self._session, CHECKPOINTS_PATH)
+            self.saver.restore(self._session, self.checkpoints_dir)
             self._session.run(tf.local_variables_initializer())
         else:
             self._session.run(self._init_op)
 
-    def save_checkpoint(self, path=os.path.join(CHECKPOINTS_PATH, "models.ckpt")):
+    def save_checkpoint(self, path=None):
         """ Saves the model to a file """
+        path = path or self.checkpoints_dir
         self.saver.save(self._session, path)
 
     def validate(self, epoch):
@@ -223,7 +223,7 @@ class Model(object):
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
                 print("Epoch complete...old ", old_epoch)
-                # self.save_checkpoint()
+                self.save_checkpoint()
                 self.validate(old_epoch)
             old_epoch = epoch
 
@@ -239,7 +239,6 @@ class Model(object):
                           {self._input: batch_input,
                            self._target: batch_label})
 
-        # self.save_checkpoint()
         return self._session.run(self.error,
                                  feed_dict={self._input: batch_input,
                                             self._target: batch_label})
