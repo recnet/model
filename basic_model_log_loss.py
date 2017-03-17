@@ -91,18 +91,18 @@ class Model(object):
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
         # Feed the output of the LSTM layer to a softmax layer
-        softmax_weights = tf.Variable(tf.random_normal(
+        sigmoid_weights = tf.Variable(tf.random_normal(
             [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
             name="weights")
 
-        softmax_bias = tf.Variable(tf.random_normal([self.user_count],
+        sigmoid_bias = tf.Variable(tf.random_normal([self.user_count],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
                                    name="biases")
 
-        logits = tf.matmul(output, softmax_weights) + softmax_bias
+        logits = tf.matmul(output, sigmoid_weights) + sigmoid_bias
         self.sigmoid = tf.nn.sigmoid(logits)
 
         # Defne error function
