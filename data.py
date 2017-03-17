@@ -43,6 +43,7 @@ class Data(object):
         self.reader = CsvReader(networkconfig)
         self._read_data()
         self._build_dict()
+        self.embedding_matrix = None
 
     def _read_data(self):
         """ Reads all the data from specified path """
@@ -64,12 +65,15 @@ class Data(object):
     def _build_dict(self):
         """ Builds dictionaries using given data """
         logging.debug("Building dictionaries...")
+        if not 'usePretrained' in self.netcfg:
+            vocab = " ".join(self.train_data).split()
+            _, _, self.word_dict, self.rev_dict = \
+                helper.build_dataset(vocab, vocabulary_size=self.netcfg['vocabulary_size'])
+        else:
+            print('doing pretraiend stuff')
+            self.word_dict, self.embedding_matrix = self.reader.test_load_pretrained_embeddings(self.netcfg['preTrainedFile'],self.netcfg['dimensions'])
 
-        vocab = " ".join(self.train_data).split()
         users = " ".join(self.train_labels).split()
-
-        _, _, self.word_dict, self.rev_dict = \
-            helper.build_dataset(vocab, vocabulary_size=self.netcfg['vocabulary_size'])
         _, _, self.users_dict, self.rev_users_dict = \
             helper.build_dataset(users, vocabulary_size=self.netcfg['user_count'])
         # print(self.users_dict)

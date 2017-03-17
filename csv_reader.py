@@ -68,35 +68,36 @@ class CsvReader:
                 label_full.append(label)
             return data_full, label_full
 
-def test_load_twitter(dimension_size = 25):
-    file_path = os.path.join(DATASETS_PATH, 'glove.twitter.27B.25d.txt')
-    with open(file_path, 'r', encoding='UTF-8') as csvfile:
-        reader = csv.reader(csvfile, delimiter=' ', quoting=csv.QUOTE_NONE)
-        print('tjena')
-        result = dict()
-        matrix = []
 
-        result['UNK'] = len(matrix)
-        matrix.append(np.random.rand(1, dimension_size).tolist())
+    def test_load_pretrained_embeddings(self, fileName, dimension_size=50):
+        file_path = os.path.join(DATASETS_PATH, fileName)
+        with open(file_path, 'r', encoding='UTF-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=' ', quoting=csv.QUOTE_NONE)
+            print('tjena')
+            word_dict = dict()
+            matrix = []
 
-        for row in reader:
-            firstCol = row[0]
-            # if firstCol == '<unknown>': removing this because other dataset doesnt have unknown tag at all
-            #     # matrix.append(row[1:])
-            #     result['UNK'] = len(matrix)
-            #     matrix.append(np.random.uniform(0, 1, size=dimension_size))
+            word_dict['UNK'] = len(matrix)
+            matrix.append(np.random.rand(1, dimension_size).tolist())
 
-            if firstCol in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
-                continue
+            for row in reader:
+                firstCol = row[0]
+                # if firstCol == '<unknown>': removing this because other dataset doesnt have unknown tag at all
+                #     # matrix.append(row[1:])
+                #     result['UNK'] = len(matrix)
+                #     matrix.append(np.random.uniform(0, 1, size=dimension_size))
 
-            if firstCol[0] == '<': #some words are tokens for usernames like <user> or <caps> etc, ignore them.
-                continue
-            result[firstCol] = len(matrix)
-            matrix.append(row[1:])
+                if firstCol in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
+                    continue
 
-    return result, np.array(matrix)
+                if firstCol[0] == '<': #some words are tokens for usernames like <user> or <caps> etc, ignore them.
+                    continue
+                word_dict[firstCol] = len(matrix)
+                matrix.append(row[1:])
 
-res, matrix = test_load_twitter()
+        return word_dict, np.array(matrix)
+
+
 
 
 
