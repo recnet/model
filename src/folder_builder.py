@@ -19,7 +19,7 @@ def build_structure(config):
     dir_to_create = LOGS_DIR + '/' + type + '/' + name
     tensor_dir_train_to_create = dir_to_create + '/' + TENSOR_DIR_TRAIN
     tensor_dir_valid_to_create = dir_to_create + '/' + TENSOR_DIR_VALID
-    checkpoings_dir_to_create = dir_to_create + '/' + CHECKPOINTS_DIR
+    checkpoints_dir_to_create = dir_to_create + '/' + CHECKPOINTS_DIR
 
     if not os.path.exists(tensor_dir_train_to_create):
         os.makedirs(tensor_dir_train_to_create)
@@ -27,7 +27,7 @@ def build_structure(config):
     if not os.path.exists(tensor_dir_valid_to_create):
         os.makedirs(tensor_dir_valid_to_create)
 
-    if not os.path.exists(checkpoings_dir_to_create):
-        os.makedirs(checkpoings_dir_to_create)
+    if not os.path.exists(checkpoints_dir_to_create):
+        os.makedirs(checkpoints_dir_to_create)
 
     return dir_to_create
