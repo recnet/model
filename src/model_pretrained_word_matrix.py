@@ -71,6 +71,7 @@ class Model(object):
             print('finished data')
             self.build_graph()
             self.load_checkpoint()
+        self._session.run(self.embedding_init, feed_dict={self.embedding_placeholder: self.data.embedding_matrix})
 
     def build_graph(self):
         self._input = tf.placeholder(tf.int32,
@@ -84,9 +85,11 @@ class Model(object):
         lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
 
         # Embedding matrix for the words
-        print('type of embed matrix' , type(self.data.embedding_matrix))
-        embedding_matrix = tf.Variable(self.data.embedding_matrix, trainable=False,
-            name="embeddings")
+        embedding_matrix = tf.Variable(tf.constant(0.0, shape=[self.vocabulary_size, self.config['dimensions']], dtype=tf.float64),
+                        trainable=False, name="embedding_matrix", dtype=tf.float64)
+
+        self.embedding_placeholder = tf.placeholder(tf.float64, [self.vocabulary_size, self.config['dimensions']])
+        self.embedding_init = embedding_matrix.assign(self.embedding_placeholder)
 
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._input)

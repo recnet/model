@@ -45,7 +45,7 @@ network:
 
   - type: 'pretrained_matrix'
     name: 'network1'
-    vocabulary_size: 15000
+    vocabulary_size: 399987
     user_count: 6
     learning_rate: 1.5
     embedding_size: 100

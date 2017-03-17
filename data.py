@@ -42,8 +42,8 @@ class Data(object):
         self.batch_size = self.netcfg['batch_size']
         self.reader = CsvReader(networkconfig)
         self._read_data()
-        self._build_dict()
         self.embedding_matrix = None
+        self._build_dict()
 
     def _read_data(self):
         """ Reads all the data from specified path """
@@ -72,7 +72,6 @@ class Data(object):
         else:
             print('doing pretraiend stuff')
             self.word_dict, self.embedding_matrix = self.reader.test_load_pretrained_embeddings(self.netcfg['preTrainedFile'],self.netcfg['dimensions'])
-
         users = " ".join(self.train_labels).split()
         _, _, self.users_dict, self.rev_users_dict = \
             helper.build_dataset(users, vocabulary_size=self.netcfg['user_count'])

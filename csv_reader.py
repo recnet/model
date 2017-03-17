@@ -78,7 +78,7 @@ class CsvReader:
             matrix = []
 
             word_dict['UNK'] = len(matrix)
-            matrix.append(np.random.rand(1, dimension_size).tolist())
+            matrix.append(np.random.rand(1, dimension_size)[0].tolist())
 
             for row in reader:
                 firstCol = row[0]
@@ -94,8 +94,9 @@ class CsvReader:
                     continue
                 word_dict[firstCol] = len(matrix)
                 matrix.append(row[1:])
-
-        return word_dict, np.array(matrix)
+        res = np.array(matrix)
+        res = res.astype(np.float64)
+        return word_dict, res
 
 
 
