@@ -168,7 +168,8 @@ class Model(object):
         errSum = self._session.run(self.error_sum, {self._input: val_data, self._target: val_labels})
         self.valid_writer.add_summary(errSum, epoch)
 
-        train_data, train_labels = self.data.get_testing(self.max_title_length, self.user_count) #HUGE NOTE: in the data class, change testing file to be the same as training file to compare validation vs training dataset :)
+        train_data, train_labels = self.data.get_training(self.max_title_length,
+                                                          self.user_count)
         sum = self._session.run(self.prec_sum_copy,
                                      {self._input: train_data,
                                       self._target: train_labels})

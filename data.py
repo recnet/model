@@ -30,8 +30,8 @@ import helper
 #FILE_TRAINING    = "arti.csv"
 #FILE_VALIDATION = "arti_val.csv"
 
-FILE_TRAINING    = "training_data_top_n_single.csv"
-FILE_VALIDATION = "validation_data_top_n_single.csv"
+FILE_TRAINING = "training_data_top_n.csv"
+FILE_VALIDATION = "validation_data_top_n.csv"
 FILE_TESTING = "testing_data_top_n.csv"
 DEFAULT_BATCH_SIZE = 1
 DEFAULT_VOCAB_SIZE = 50000
@@ -107,6 +107,17 @@ class Data(object):
             batch_y.append(label_vec)
 
         self.percent_of_epoch = self._current_train_index / self.train_size
+        return batch_x, batch_y
+
+    def get_training(self, title_length, user_count):
+        """ Get the whole training set in a vectorized form """
+        old_ind = self._current_train_index
+        old_epoch = self.completed_training_epochs
+        self._current_train_index = 0
+        batch_x, batch_y = self.next_train_batch(title_length, user_count,
+                                                 self.train_size)
+        self._current_train_index = old_ind
+        self.completed_training_epochs = old_epoch
         return batch_x, batch_y
 
     def get_validation(self, title_length, user_count):
