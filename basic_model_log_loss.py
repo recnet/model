@@ -57,6 +57,7 @@ class Model(object):
         self.error = None
         self._init_op = None
         self.saver = None
+        self.epoch = None
 
         self.build_graph()
         with tf.device("/cpu:0"):
@@ -65,6 +66,9 @@ class Model(object):
             self.load_checkpoint()
 
     def build_graph(self):
+        """ Builds the computational graph """
+        self.epoch = tf.Variable(1, dtype=tf.int32, name="train_epoch")
+
         self._input = tf.placeholder(tf.int32,
                                      [None, self.max_title_length],
                                      name="input")
@@ -100,7 +104,7 @@ class Model(object):
             [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
-            name="weights")
+                                      name="weights")
 
         sigmoid_bias = tf.Variable(tf.random_normal([self.user_count],
                                                     stddev=0.35,
@@ -111,7 +115,8 @@ class Model(object):
         self.sigmoid = tf.nn.sigmoid(logits)
 
         # Defne error function
-        error = tf.losses.log_loss(labels=self._target,predictions=self.sigmoid)
+        error = tf.losses.log_loss(labels=self._target,
+                                   predictions=self.sigmoid)
 
         cross_entropy = tf.reduce_mean(error)
         self.error = cross_entropy
@@ -126,8 +131,12 @@ class Model(object):
 
         # Convert all probibalistic predictions to discrete predictions
         self.predictions = tf.map_fn(top_k_to_bool, self.sigmoid, dtype=tf.bool)
-        self.precision = tf.metrics.precision(self._target, self.predictions)#Need to create two different, because they have internal memory of old values
-        self.precision_copy = tf.metrics.precision(self._target, self.predictions)
+        # Need to create two different precisions, because they have
+        # internal memory of old values
+        self.precision_validation = tf.metrics.precision(self._target,
+                                                         self.predictions)
+        self.precision_training = tf.metrics.precision(self._target,
+                                                       self.predictions)
 
         # Last step
         self._init_op = tf.group(tf.global_variables_initializer(),
@@ -135,15 +144,19 @@ class Model(object):
 
         self.error_sum = tf.summary.scalar('cross_entropy', self.error)
 
-        self.prec_sum = tf.summary.scalar('precision', self.precision[1]) #Need to create two different, because they have internal memory of old values
-        self.prec_sum_copy = tf.summary.scalar('precision', self.precision_copy[1])
+        # Need to create two different, because they have internal memory
+        # of old values
+        self.prec_sum_validation = \
+            tf.summary.scalar('precision', self.precision_validation[1])
+        self.prec_sum_training = \
+            tf.summary.scalar('precision', self.precision_training[1])
 
-        # Last step
+        # Logging step
         log_dir = "./data"
         self.train_writer = tf.summary.FileWriter(log_dir + '/train')
         self.valid_writer = tf.summary.FileWriter(log_dir + '/valid')
 
-        # self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver()
 
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
@@ -159,23 +172,36 @@ class Model(object):
         """ Saves the model to a file """
         self.saver.save(self._session, path)
 
-    def validate(self, epoch):
+    def validate(self):
         """ Validates the model and returns the final precision """
         print("Starting validation...")
-        val_data, val_labels = self.data.get_validation(self.max_title_length, self.user_count)
-        summary = self._session.run(self.prec_sum, {self._input: val_data, self._target: val_labels})
-        self.valid_writer.add_summary(summary, epoch)
-        errSum = self._session.run(self.error_sum, {self._input: val_data, self._target: val_labels})
-        self.valid_writer.add_summary(errSum, epoch)
+        # Evaluate epoch
+        epoch = self.epoch.eval(self._session)
 
+        # Compute validation error
+        val_data, val_labels = self.data.get_validation(self.max_title_length,
+                                                        self.user_count)
+        validation_summary = self._session.run(self.prec_sum_validation,
+                                               {self._input: val_data,
+                                                self._target: val_labels})
+
+        self.valid_writer.add_summary(validation_summary, epoch)
+        validation_err_summary = self._session.run(self.error_sum,
+                                                   {self._input: val_data,
+                                                    self._target: val_labels})
+        self.valid_writer.add_summary(validation_err_summary, epoch)
+
+        # Compute training error
         train_data, train_labels = self.data.get_training(self.max_title_length,
                                                           self.user_count)
-        sum = self._session.run(self.prec_sum_copy,
-                                     {self._input: train_data,
-                                      self._target: train_labels})
-        self.train_writer.add_summary(sum, epoch)
-        errSum = self._session.run(self.error_sum, {self._input: train_data, self._target: train_labels})
-        self.train_writer.add_summary(errSum, epoch)
+        training_summary = self._session.run(self.prec_sum_training,
+                                             {self._input: train_data,
+                                              self._target: train_labels})
+        self.train_writer.add_summary(training_summary, epoch)
+        training_err_summary = self._session.run(self.error_sum,
+                                                 {self._input: train_data,
+                                                  self._target: train_labels})
+        self.train_writer.add_summary(training_err_summary, epoch)
         return None
 
     def validate_batch(self):
@@ -194,6 +220,9 @@ class Model(object):
         error_sum = 0
         val_error_sum = 0
         old_epoch = 0
+        # Do initial validation if first time running
+        if self.epoch.eval(self._session) == 0:
+            self.validate()
         # Train for a specified amount of epochs
         for i in self.data.for_n_train_epochs(self.training_epochs,
                                               self.batch_size):
@@ -218,13 +247,14 @@ class Model(object):
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
+                self._session.run(self.epoch.assign_add(1))
                 print("Epoch complete...old ", old_epoch)
-                # self.save_checkpoint()
-                self.validate(old_epoch)
+                self.save_checkpoint()
+                self.validate()
             old_epoch = epoch
 
         # Save model when done training
-        # self.save_checkpoint()
+        self.save_checkpoint()
 
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
@@ -243,7 +273,6 @@ class Model(object):
 def main():
     """ A main method that creates the model and starts training it """
     model = Model(tf.InteractiveSession())
-    model.validate(-1)
     model.train()
     model.train_writer.close()
     model.valid_writer.close()
