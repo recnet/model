@@ -91,23 +91,6 @@ class Model(object):
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
 
-        # Hidden layer 
-        relu_hid_weights = tf.Variable(tf.random_normal(
-            [self.lstm_neurons, self.user_count],
-            stddev=0.35,
-            dtype=tf.float64),
-            name="weights") # todo investigate dimensions
-        relu_hid_bias = tf.Variable(tf.random_normal(
-            [self.user_count],
-            stddev=0.35,
-            dtype=tf.float64),
-            name="biases") # todo investigate dimension
-
-        hid_output = tf.nn.relu_layer(output, relu_hid_weights, relu_hid_bias, dtype=tf.float64)
-
-        # Pretraining
-        # todo pretraining
-
 
 
         # Training
