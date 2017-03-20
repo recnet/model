@@ -67,7 +67,7 @@ class Model(object):
 
     def build_graph(self):
         """ Builds the computational graph """
-        self.epoch = tf.Variable(1, dtype=tf.int32, name="train_epoch")
+        self.epoch = tf.Variable(0, dtype=tf.int32, name="train_epoch")
 
         self._input = tf.placeholder(tf.int32,
                                      [None, self.max_title_length],
