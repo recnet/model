@@ -31,24 +31,25 @@ import glob
 import os.path
 import tensorflow as tf
 import data
-
-CKPT_PATH = "checkpoints/model.ckpt"
-
+from src.networkconfig import yamlconfig as networkconfig
+from src.folder_builder import build_structure
+from src.writer import log_config
+from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
 
 class Model(object):
     """ A model representing our neural network """
 
-    def __init__(self, session):
+    def __init__(self, config, session):
         self._session = session
-        self.vocabulary_size = 15000
-        self.learning_rate = 0.15
-        self.embedding_size = 128
-        self.max_title_length = 25
-        self.lstm_neurons = 200
-        self.user_count = 6
-        self.batch_size = 25
-        self.training_epochs = 5
-        self.users_to_select = 1
+        self.vocabulary_size = config['vocabulary_size']
+        self.user_count = config['user_count']
+        self.learning_rate = config['learning_rate']
+        self.embedding_size = config['embedding_size']
+        self.max_title_length = config['max_title_length']
+        self.lstm_neurons = config['lstm_neurons']
+        self.batch_size = config['batch_size']
+        self.training_epochs = config['training_epochs']
+        self.users_to_select = config['users_to_select']
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -59,10 +60,15 @@ class Model(object):
         self.saver = None
         self.epoch = None
 
+        self.logging_dir = build_structure(config)
+        self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
+        log_config(config)  # Discuss if we should do this after, and somehow take "highest" precision from validation?
+        self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN)
+        self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
         self.build_graph()
+
         with tf.device("/cpu:0"):
-            self.data = data.Data(user_count=self.user_count, data_path="./data/", verbose=True,
-                                  vocab_size=self.vocabulary_size)
+            self.data = data.Data(config)
             self.load_checkpoint()
 
     def build_graph(self):
@@ -151,25 +157,21 @@ class Model(object):
         self.prec_sum_training = \
             tf.summary.scalar('precision', self.precision_training[1])
 
-        # Logging step
-        log_dir = "./data"
-        self.train_writer = tf.summary.FileWriter(log_dir + '/train')
-        self.valid_writer = tf.summary.FileWriter(log_dir + '/valid')
-
         self.saver = tf.train.Saver()
 
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
-        checkpoint_files = glob.glob(CKPT_PATH + "*")
+        checkpoint_files = glob.glob(os.path.join(self.checkpoints_dir, "*"))
         if all([os.path.isfile(file) for file in checkpoint_files]) \
                 and checkpoint_files:
-            self.saver.restore(self._session, CKPT_PATH)
+            self.saver.restore(self._session, self.checkpoints_dir)
             self._session.run(tf.local_variables_initializer())
         else:
             self._session.run(self._init_op)
 
-    def save_checkpoint(self, path=CKPT_PATH):
+    def save_checkpoint(self, path=None):
         """ Saves the model to a file """
+        path = path or self.checkpoints_dir
         self.saver.save(self._session, path)
 
     def validate(self):
@@ -179,8 +181,7 @@ class Model(object):
         epoch = self.epoch.eval(self._session)
 
         # Compute validation error
-        val_data, val_labels = self.data.get_validation(self.max_title_length,
-                                                        self.user_count)
+        val_data, val_labels = self.data.get_validation()
         validation_summary = self._session.run(self.prec_sum_validation,
                                                {self._input: val_data,
                                                 self._target: val_labels})
@@ -192,8 +193,7 @@ class Model(object):
         self.valid_writer.add_summary(validation_err_summary, epoch)
 
         # Compute training error
-        train_data, train_labels = self.data.get_training(self.max_title_length,
-                                                          self.user_count)
+        train_data, train_labels = self.data.get_training()
         training_summary = self._session.run(self.prec_sum_training,
                                              {self._input: train_data,
                                               self._target: train_labels})
@@ -207,8 +207,7 @@ class Model(object):
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
         with tf.device("/cpu:0"):
-            data_batch, label_batch = self.data.next_valid_batch \
-                (self.max_title_length, self.user_count, self.batch_size)
+            data_batch, label_batch = self.data.next_valid_batch()
 
         return self._session.run(self.error,
                                  feed_dict={self._input: data_batch,
@@ -259,8 +258,7 @@ class Model(object):
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
         with tf.device("/cpu:0"):
-            batch_input, batch_label = self.data.next_train_batch \
-                (self.max_title_length, self.user_count, self.batch_size)
+            batch_input, batch_label = self.data.next_train_batch()
         self._session.run(self.train_op,
                           {self._input: batch_input,
                            self._target: batch_label})
@@ -270,13 +268,17 @@ class Model(object):
                                  feed_dict={self._input: batch_input,
                                             self._target: batch_label})
 
+    def close_writers(self):
+        self.train_writer.close()
+        self.valid_writer.close()
+
 def main():
     """ A main method that creates the model and starts training it """
-    model = Model(tf.InteractiveSession())
-    model.train()
-    model.train_writer.close()
-    model.valid_writer.close()
-
+    with tf.Session() as sess:
+        config = 2
+        model = Model(networkconfig[config], sess)
+        model.train()
+        model.close_writers()
 
 if __name__ == "__main__":
     main()
