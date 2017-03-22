@@ -1,0 +1,49 @@
+data:
+  path: 'resources/datasets/'
+
+network:
+  - type: 'basic'
+    name: 'network1'
+    vocabulary_size: 10000
+    user_count: 6
+    learning_rate: 0.5
+    embedding_size: 100
+    max_title_length: 30
+    lstm_neurons: 200
+    batch_size: 25
+    training_epochs: 5
+    users_to_select: 1
+    validation_data: 'validation_data_top_n_single.csv'
+    training_data: 'training_data_top_n_single.csv'
+    testing_data: 'testing_data_top_n_single.csv'
+
+  - type: 'basic'
+    name: 'network2'
+    vocabulary_size: 15000
+    user_count: 6
+    learning_rate: 1.5
+    embedding_size: 100
+    max_title_length: 25
+    lstm_neurons: 300
+    batch_size: 25
+    training_epochs: 5
+    users_to_select: 1
+    validation_data: 'validation_data_top_n_single.csv'
+    training_data: 'training_data_top_n_single.csv'
+    testing_data: 'testing_data_top_n_single.csv'
+
+  - type: 'logloss'
+    name: 'network1'
+    vocabulary_size: 15000
+    user_count: 6
+    learning_rate: 1.5
+    embedding_size: 100
+    max_title_length: 25
+    lstm_neurons: 300
+    batch_size: 25
+    training_epochs: 5
+    users_to_select: 1
+    validation_data: 'validation_data_top_n_single.csv'
+    training_data: 'training_data_top_n_single.csv'
+    testing_data: 'testing_data_top_n_single.csv'
+
