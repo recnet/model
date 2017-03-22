@@ -149,7 +149,11 @@ class Model(object):
 
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
+<<<<<<< 7bd49db3e128ab6e630f088776200b8cc40bb0db
         checkpoint_files = glob.glob((self.checkpoints_dir + "*"))
+=======
+        checkpoint_files = glob.glob(self.checkpoints_dir + "*")
+>>>>>>> changed how to join paths for checkpoints
         if all([os.path.isfile(file) for file in checkpoint_files]) \
                 and checkpoint_files:
             self.saver.restore(self._session, self.checkpoints_dir)
