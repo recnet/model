@@ -79,7 +79,6 @@ class Data(object):
 
     def next_train_batch(self, batch_size=None):
         batch_size = batch_size or self.batch_size
-        """ Get the next batch of training data """
         batch_x = []
         batch_y = []
         for _ in range(0, batch_size):
@@ -119,7 +118,7 @@ class Data(object):
         """ Get the next batch of validation data """
         batch_x = []
         batch_y = []
-        for _ in range(0, self.netcfg['batch_size']):
+        for _ in range(0, batch_size):
             sentence = self.validation_data[self._current_valid_index]
             label = self.valid_labels[self._current_valid_index]
 
@@ -144,15 +143,16 @@ class Data(object):
         """ Get the whole validation set in a vectorized form """
         old_ind = self._current_test_index
         self._current_test_index = 0
-        batch_x, batch_y = self.next_test_batch()
+        batch_x, batch_y = self.next_test_batch(self.test_size)
         self._current_test_index = old_ind
         return batch_x, batch_y
 
-    def next_test_batch(self):
+    def next_test_batch(self, batch_size=None):
         """ Get the next batch of validation data """
+        batch_size = batch_size or self.batch_size
         batch_x = []
         batch_y = []
-        for _ in range(0, self.netcfg['batch_size']):
+        for _ in range(0, batch_size):
             sentence = self.test_data[self._current_test_index]
             label = self.test_labels[self._current_test_index]
 
@@ -189,35 +189,3 @@ class Data(object):
         self.completed_training_epochs = old_epoch
         return batch_x, batch_y
 
-    def get_testing(self):
-        """ Get the whole validation set in a vectorized form """
-        old_ind = self._current_test_index
-        self._current_test_index = 0
-        batch_x, batch_y = self.next_testing_batch(self.title_length, self.user_count,
-                                                 self.test_size)
-        self._current_test_index = old_ind
-        return batch_x, batch_y
-
-    def next_testing_batch(self, title_length, user_count,
-                         batch_size):
-        """ Get the next batch of validation data """
-        batch_x = []
-        batch_y = []
-        for _ in range(0, batch_size):
-            sentence = self.test_data[self._current_test_index]
-            label = self.test_labels[self._current_test_index]
-
-            self._current_test_index += 1
-
-            # Support multiple epochs
-            if self._current_test_index >= self.test_size:
-                self._current_test_index = 0
-
-            # Turn sentences and labels into vectors
-            sentence_vec = helper.get_indicies(sentence,
-                                               self.word_dict, title_length)
-            label_vec = helper.label_vector(label.split(), self.users_dict,
-                                            user_count)
-            batch_x.append(sentence_vec)
-            batch_y.append(label_vec)
-        return batch_x, batch_y
