@@ -1,4 +1,4 @@
-from src.config import cfg
+from config import cfg
 
 
 yamlconfig = cfg['network']
