@@ -73,7 +73,7 @@ class Model(object):
                                      [None, self.max_title_length],
                                      name="input")
 
-        self._target = tf.placeholder(tf.int32,
+        self._target = tf.placeholder(tf.float64,
                                       [None, self.user_count],
                                       name="target")
 
@@ -115,8 +115,8 @@ class Model(object):
         self.sigmoid = tf.nn.sigmoid(logits)
 
         # Defne error function
-        error = tf.losses.log_loss(labels=self._target,
-                                   predictions=self.sigmoid)
+        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target,
+                                                        logits=logits)
 
         cross_entropy = tf.reduce_mean(error)
         self.error = cross_entropy
