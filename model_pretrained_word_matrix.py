@@ -30,11 +30,11 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-import src.data as data
-from src.networkconfig import yamlconfig as networkconfig
+import data
+from networkconfig import yamlconfig as networkconfig
 from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
-from src.folder_builder import build_structure
-from src.writer import log_config
+from folder_builder import build_structure
+from writer import log_config
 
 
 # TODO Separera checkpoints ut ur modell klassen
