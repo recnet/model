@@ -20,38 +20,49 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-#==============================================================================
-import csv
+# ==============================================================================
+from enum import Enum
+
 import re
+from definitions import DATASETS_PATH
+import os
+import csv
 
-def read(file_path, data_column, label_column):
-    """ A function that reads the data and
-    corresponding label from a CSV file """
-    with open(file_path, 'r', encoding='utf-8') as csvfile:
-        reader = csv.reader(csvfile)
-        data_full = []
-        label_full = []
-        for row in reader:
-            data = ""
-            label = row[label_column]
-            for elem in data_column:
-                col = row[elem]
-                #replaces each number with NUMTOKEN
-                col = re.sub('\d+', 'NUMTOKEN', col)
-                col = re.sub('\s+NUMTOEKN\s+', ' NUMTOKEN ', col)
 
-                for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%']:
-                    col = str(col)
-                    col = col.replace(character, '')
-                if col:
-                    data += col + ", "
-            label = label.replace(',', '')
-            data_full.append(data.strip(' ').strip(','))
-            label_full.append(label)
-        return data_full, label_full
+class Dataenum(Enum):
+    TESTING = "testing_data"
+    TRAINING = "training_data"
+    VALIDATION = "validation_data"
 
-# [data, labels] = read("data/top5/training_data_top_n.csv",[0],1)
-#
-# for i in range(len(data)):
-#      print("Data: ", data[i])
-#      print("Label: ", labels[i])
+
+class CsvReader:
+    def __init__(self, netcfg):
+        self.netcfg = netcfg
+        self.encoding = 'UTF-8'
+
+    def get_data(self, datatype, data_column=[0], label_column=1):
+        """ A function that reads the data and
+        corresponding label from a CSV file """
+        file_path = os.path.join(DATASETS_PATH, self.netcfg[datatype.value])
+        with open(file_path, 'r', encoding=self.encoding) as csvfile:
+            reader = csv.reader(csvfile)
+            data_full = []
+            label_full = []
+            for row in reader:
+                data = ""
+                label = row[label_column]
+                for elem in data_column:
+                    col = row[elem]
+                    # replaces each number with NUMTOKEN
+                    col = re.sub('\d+', 'NUMTOKEN', col)
+                    col = re.sub('\s+NUMTOKEN\s+', ' NUMTOKEN ', col)
+
+                    for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%']:
+                        col = str(col)
+                        col = col.replace(character, '')
+                    if col:
+                        data += col + ", "
+                label = label.replace(',', '')
+                data_full.append(data.strip(' ').strip(','))
+                label_full.append(label)
+            return data_full, label_full

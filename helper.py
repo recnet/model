@@ -20,9 +20,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-#==============================================================================
+# ==============================================================================
 import collections
 import numpy as np
+
 
 def test_with_custom_file(filename):
     """ Tests the build_dataset function """
@@ -34,6 +35,7 @@ def test_with_custom_file(filename):
     print(str(data))
     print(str(dictionary))
     print(str(reverse_dictionary))
+
 
 def build_dataset(words, vocabulary_size=50000):
     """ Builds a dictionary from given words """
@@ -55,11 +57,12 @@ def build_dataset(words, vocabulary_size=50000):
     reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
     return data, count, dictionary, reverse_dictionary
 
+
 def create_matrix(dictionary):
     """ Creates an identity matrix with size of dictionary """
     to_len = len(dictionary)
     matrix = np.identity(to_len)
-    matrix[0][0] = 0 #this will be kinda "default vec" for 'UNK'
+    matrix[0][0] = 0  # this will be kinda "default vec" for 'UNK'
     return matrix
 
 def get_indicies(sentence, dictionary, max_words):
@@ -85,7 +88,6 @@ def pad(sentence, dictionary, max_words):
     sentence_len = len(sentence)
     for i, word in enumerate(sentence):
         if max_words - sentence_len + i > max_words:
-            # if i > max_words-1:
             return result
         if word in dictionary:
             result[max_words - sentence_len + i] = dictionary[word]
@@ -93,10 +95,11 @@ def pad(sentence, dictionary, max_words):
             result[max_words - sentence_len + i] = 0
     return result
 
+
 def label_vector(users, dic, max_users):
     """ Turns an array of some users into an array
     with ones on those users indicies """
-    vector = [0]*max_users
+    vector = [0] * max_users
     for user in users:
         if user in dic:
             vector[dic[user]] = 1
