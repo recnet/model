@@ -127,9 +127,10 @@ class Model(object):
         cross_entropy = tf.reduce_mean(error)
         self.error = cross_entropy
 
-        #Todo not sure if regularization should be before or after self.error
+        # Todo not sure if regularization should be before or after self.error
 
-        #Regularization(L2)
+        # Regularization(L2)
+        # If more layers are added these should be added as a l2_loss term in the regularization function
         regualarization = tf.nn.l2_loss(sigmoid_weights)
         cross_entropy = tf.reduce_mean(cross_entropy + self.beta * regualarization)
 
