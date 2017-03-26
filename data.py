@@ -44,6 +44,10 @@ class Data(object):
         self._read_data()
         self.embedding_matrix = None
         self._build_dict()
+        self.trainAbsent = 0
+        self.trainPresent = 0
+        self.validAbsent = 0
+        self.validPresent = 0
 
     def _read_data(self):
         """ Reads all the data from specified path """
@@ -96,10 +100,11 @@ class Data(object):
             # TODO Detta ska inte ligga i funktionen som generar ny data
 
             # Turn sentences and labels into vector representations
-            sentence_vec = helper.get_indicies(sentence,
+            sentence_vec, present, absent = helper.get_indicies(sentence,
                                                self.word_dict,
                                                self.netcfg['max_title_length'])
-
+            self.trainPresent += present
+            self.trainAbsent += absent
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.netcfg['user_count'])
             batch_x.append(sentence_vec)
@@ -132,10 +137,12 @@ class Data(object):
                 self._current_valid_index = 0
 
             # Turn sentences and labels into vectors
-            sentence_vec = helper.get_indicies(sentence,
+            sentence_vec, pres, absent = helper.get_indicies(sentence,
                                                self.word_dict,
                                                self.netcfg['max_title_length'])
 
+            self.validPresent += pres
+            self.validAbsent += absent
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.netcfg['user_count'])
             batch_x.append(sentence_vec)
@@ -192,3 +199,5 @@ class Data(object):
         self.completed_training_epochs = old_epoch
         return batch_x, batch_y
 
+    def get_stats(self):
+        return self.trainPresent, self.trainAbsent, self.validPresent, self.validAbsent
