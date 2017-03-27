@@ -135,7 +135,7 @@ class Model(object):
         # Output layer
         # Feed the output of the previous layer to a sigmoid layer
         sigmoid_weights = tf.Variable(tf.random_normal(
-            [self.lstm_neurons, self.user_count],
+            [self.hidden_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
                                       name="weights")
@@ -310,7 +310,7 @@ class Model(object):
 def main():
     """ A main method that creates the model and starts training it """
     with tf.Session() as sess:
-        config = 4
+        config = 5
         model = Model(networkconfig[config], sess)
         model.train()
         model.close_writers()
