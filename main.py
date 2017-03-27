@@ -6,7 +6,7 @@ def main():
     """ A main method that creates the model and starts training it """
     with tf.Session() as sess:
         config = 2
-        m = model.Model(networkconfig[config], sess)
+        m = model.SoftmaxModel(networkconfig[config], sess)
         m.train()
         m.close_writers()
 

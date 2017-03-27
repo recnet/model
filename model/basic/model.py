@@ -38,7 +38,7 @@ from ..util.writer import log_config
 
 
 # TODO Separera checkpoints ut ur modell klassen
-class Model(object):
+class SoftmaxModel(object):
     def __init__(self, config, session):
         self.config = config
         self._session = session
@@ -250,14 +250,14 @@ def main():
     """ A main method that creates the model and starts training it """
     with tf.Session() as sess:
         first_config = 0
-        model = Model(networkconfig[first_config], sess)
+        model = SoftmaxModel(networkconfig[first_config], sess)
         model.train()
         model.close_writers()
 
     tf.reset_default_graph() #Must reset graph because tensorflow doesn't do it. Must be outside of a session and before next session.
     with tf.Session() as sess:
         second_config = 1
-        modelTwo = Model(networkconfig[second_config], sess)
+        modelTwo = SoftmaxModel(networkconfig[second_config], sess)
         modelTwo.train()
         modelTwo.close_writers()
 

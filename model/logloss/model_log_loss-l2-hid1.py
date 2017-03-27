@@ -36,7 +36,7 @@ from ..util.networkconfig import yamlconfig as networkconfig
 from ..util.folder_builder import build_structure
 from ..util.writer import log_config
 
-class Model(object):
+class LogLossRegularisedHidden(object):
     """ A model representing our neural network """
 
     def __init__(self, config, session):
@@ -311,7 +311,7 @@ def main():
     """ A main method that creates the model and starts training it """
     with tf.Session() as sess:
         config = 5
-        model = Model(networkconfig[config], sess)
+        model = LogLossRegularisedHidden(networkconfig[config], sess)
         model.train()
         model.close_writers()
 

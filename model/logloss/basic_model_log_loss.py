@@ -36,7 +36,7 @@ from ..util.networkconfig import yamlconfig as networkconfig
 from ..util.folder_builder import build_structure
 from ..util.writer import log_config
 
-class Model(object):
+class LogLossModel(object):
     """ A model representing our neural network """
 
     def __init__(self, config, session):
