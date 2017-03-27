@@ -51,7 +51,7 @@ class Model(object):
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
         self.hidden_neurons = config['hidden_neurons']
-        self.beta = config['beta']
+        self.l2_factor = config['l2_factor']
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -85,7 +85,9 @@ class Model(object):
                                       [None, self.user_count],
                                       name="target")
 
-        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
+        # LSTM Layer
+        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons,
+                                             state_is_tuple=True)
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
@@ -97,61 +99,57 @@ class Model(object):
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._input)
         # Run the LSTM layer with the embedded input
-        outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
-                                       dtype=tf.float64)
+        lstm_outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
+                                            dtype=tf.float64)
 
-        outputs = tf.transpose(outputs, [1, 0, 2])
-        output = outputs[-1]
-
-
-
-        # Training
-
-        # Feed the output of the LSTM layer to a softmax layer
+        lstm_outputs = tf.transpose(lstm_outputs, [1, 0, 2])
+        lstm_output = lstm_outputs[-1]
 
         # Hidden layer 1
-        sigmoid_weights_hid1 = tf.Variable(tf.random_normal(
+        hid1_weights = tf.Variable(tf.random_normal(
             [self.lstm_neurons, self.hidden_neurons],
+            stddev=0.35,
+            dtype=tf.float64),
+                                   name="hid1_weights")
+
+        hid1_bias = tf.Variable(tf.random_normal([self.hidden_neurons],
+                                                 stddev=0.35,
+                                                 dtype=tf.float64),
+                                name="hid1_biases")
+        hid1_logits = tf.matmul(lstm_output, hid1_weights) + hid1_bias
+        hid1_output = tf.nn.sigmoid(hid1_logits)
+
+
+        # Output layer
+        # Feed the output of the previous layer to a sigmoid layer
+        sigmoid_weights = tf.Variable(tf.random_normal(
+            [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
                                       name="weights")
 
-        sigmoid_bias_hid1 = tf.Variable(tf.random_normal([self.hidden_neurons],
+        sigmoid_bias = tf.Variable(tf.random_normal([self.user_count],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
                                    name="biases")
 
-        logits_hid1 = tf.matmul(output, sigmoid_weights_hid1) + sigmoid_bias_hid1
-        output = tf.nn.sigmoid(logits_hid1)
-
-        # Output layer
-        sigmoid_weights_out = tf.Variable(tf.random_normal(
-            [self.hidden_neurons, self.user_count],
-            stddev=0.35,
-            dtype=tf.float64),
-            name="weights")
-
-        sigmoid_bias_out = tf.Variable(tf.random_normal([self.user_count],
-                                                         stddev=0.35,
-                                                         dtype=tf.float64),
-                                        name="biases")
-
-        logits = tf.matmul(output, sigmoid_weights_out) + sigmoid_bias_out
+        logits = tf.matmul(hid1_output, sigmoid_weights) + sigmoid_bias
         self.sigmoid = tf.nn.sigmoid(logits)
 
+        # Training
+
         # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target, logits=logits)
-
-        cross_entropy = tf.reduce_mean(error)
-        self.error = cross_entropy
-
-        # Todo not sure if regularization should be before or after self.error
+        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target,
+                                                        logits=logits)
 
         # Regularization(L2)
-        # If more layers are added these should be added as a l2_loss term in the regularization function
-        regualarization = tf.nn.l2_loss(sigmoid_weights_hid1)
-        cross_entropy = tf.reduce_mean(cross_entropy + self.beta * regualarization)
+        # If more layers are added these should be added as a l2_loss term in
+        # the regularization function (both weight and bias).
+        cross_entropy = tf.reduce_mean(error \
+            + self.l2_factor * tf.nn.l2_loss(sigmoid_weights) \
+            + self.l2_factor * tf.nn.l2_loss(sigmoid_bias))
 
+        self.error = cross_entropy
         self.train_op = tf.train.AdamOptimizer(
             self.learning_rate).minimize(cross_entropy)
 
