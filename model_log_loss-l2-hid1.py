@@ -117,7 +117,7 @@ class Model(object):
                                                  dtype=tf.float64),
                                 name="hid1_biases")
         hid1_logits = tf.matmul(lstm_output, hid1_weights) + hid1_bias
-        hid1_output = tf.nn.sigmoid(hid1_logits)
+        hid1_output = tf.nn.relu(hid1_logits)
 
 
         # Output layer
@@ -147,7 +147,9 @@ class Model(object):
         # the regularization function (both weight and bias).
         cross_entropy = tf.reduce_mean(error \
             + self.l2_factor * tf.nn.l2_loss(sigmoid_weights) \
-            + self.l2_factor * tf.nn.l2_loss(sigmoid_bias))
+            + self.l2_factor * tf.nn.l2_loss(sigmoid_bias) \
+            + self.l2_factor * tf.nn.l2_loss(hid1_weights) \
+            + self.l2_factor * tf.nn.l2_loss(hid1_bias))
 
         self.error = cross_entropy
         self.train_op = tf.train.AdamOptimizer(
