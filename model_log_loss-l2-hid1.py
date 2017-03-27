@@ -112,10 +112,13 @@ class Model(object):
             dtype=tf.float64),
                                    name="hid1_weights")
 
-        hid1_bias = tf.Variable(tf.random_normal([self.hidden_neurons],
-                                                 stddev=0.35,
-                                                 dtype=tf.float64),
-                                name="hid1_biases")
+        # Small positive initial bias to avoid "dead" neurons for ReLU
+        # (according to Deep MNIST tutorial from TF)
+        hid1_bias = tf.Variable(tf.constant(0.1,
+                                            shape=[self.hidden_neurons],
+                                            dtype=tf.float64),
+                                name="hid1_bias")
+
         hid1_logits = tf.matmul(lstm_output, hid1_weights) + hid1_bias
         hid1_output = tf.nn.relu(hid1_logits)
 
