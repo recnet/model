@@ -109,6 +109,8 @@ class Model(object):
 
         lstm_outputs = tf.transpose(lstm_outputs, [1, 0, 2])
         lstm_output = lstm_outputs[-1]
+        if self.use_dropout:
+            lstm_output = tf.nn.dropout(lstm_outputs[-1], self._keep_prob)
 
         # Hidden layer 1
         hid1_weights = tf.Variable(tf.random_normal(
@@ -126,12 +128,9 @@ class Model(object):
 
         hid1_logits = tf.matmul(lstm_output, hid1_weights) + hid1_bias
         hid1_relu = tf.nn.relu(hid1_logits)
-        hid1_output = None
+        hid1_output = hid1_relu
         if self.use_dropout:
             hid1_output = tf.nn.dropout(hid1_relu, self._keep_prob)
-        else:
-            hid1_output = hid1_relu
-
 
         # Output layer
         # Feed the output of the previous layer to a sigmoid layer
@@ -301,7 +300,7 @@ class Model(object):
         return self._session.run(self.error,
                                  feed_dict={self._input: batch_input,
                                             self._target: batch_label,
-                                            self._keep_prob: self.dropout_prob})
+                                            self._keep_prob: 1.0})
 
     def close_writers(self):
         """ Closes tensorboard writers """
