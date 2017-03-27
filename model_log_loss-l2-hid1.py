@@ -51,10 +51,11 @@ class Model(object):
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
         self.hidden_neurons = config['hidden_neurons']
-        self.l2_factor = config['l2_factor']
         self.use_l2_loss = config['use_l2_loss']
+        self.l2_factor = config['l2_factor']
         self.use_dropout = config['use_dropout']
-        
+        self.dropout_prob = config['dropout_prob'] # Only used for train op
+
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -87,6 +88,7 @@ class Model(object):
         self._target = tf.placeholder(tf.float64,
                                       [None, self.user_count],
                                       name="target")
+        self._keep_prob = tf.placeholder(tf.float64, name="keep_prob")
 
         # LSTM Layer
         lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons,
@@ -123,7 +125,12 @@ class Model(object):
                                 name="hid1_bias")
 
         hid1_logits = tf.matmul(lstm_output, hid1_weights) + hid1_bias
-        hid1_output = tf.nn.relu(hid1_logits)
+        hid1_relu = tf.nn.relu(hid1_logits)
+        hid1_output = None
+        if self.use_dropout:
+            hid1_output = tf.nn.dropout(hid1_relu, self._keep_prob)
+        else:
+            hid1_output = hid1_relu
 
 
         # Output layer
@@ -219,23 +226,27 @@ class Model(object):
         val_data, val_labels = self.data.get_validation()
         validation_summary = self._session.run(self.prec_sum_validation,
                                                {self._input: val_data,
-                                                self._target: val_labels})
+                                                self._target: val_labels,
+                                                self._keep_prob: 1.0})
 
         self.valid_writer.add_summary(validation_summary, epoch)
         validation_err_summary = self._session.run(self.error_sum,
                                                    {self._input: val_data,
-                                                    self._target: val_labels})
+                                                    self._target: val_labels,
+                                                    self._keep_prob: 1.0})
         self.valid_writer.add_summary(validation_err_summary, epoch)
 
         # Compute training error
         train_data, train_labels = self.data.get_training()
         training_summary = self._session.run(self.prec_sum_training,
                                              {self._input: train_data,
-                                              self._target: train_labels})
+                                              self._target: train_labels,
+                                              self._keep_prob: 1.0})
         self.train_writer.add_summary(training_summary, epoch)
         training_err_summary = self._session.run(self.error_sum,
                                                  {self._input: train_data,
-                                                  self._target: train_labels})
+                                                  self._target: train_labels,
+                                                  self._keep_prob: 1.0})
         self.train_writer.add_summary(training_err_summary, epoch)
         return None
 
@@ -246,13 +257,12 @@ class Model(object):
 
         return self._session.run(self.error,
                                  feed_dict={self._input: data_batch,
-                                            self._target: label_batch})
+                                            self._target: label_batch,
+                                            self._keep_prob: 1.0})
 
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-        error_sum = 0
-        val_error_sum = 0
         old_epoch = 0
         # Do initial validation if first time running
         if self.epoch.eval(self._session) == 0:
@@ -291,14 +301,17 @@ class Model(object):
             batch_input, batch_label = self.data.next_train_batch()
         self._session.run(self.train_op,
                           {self._input: batch_input,
-                           self._target: batch_label})
+                           self._target: batch_label,
+                           self._keep_prob: self.dropout_prob})
 
         # self.save_checkpoint()
         return self._session.run(self.error,
                                  feed_dict={self._input: batch_input,
-                                            self._target: batch_label})
+                                            self._target: batch_label,
+                                            self._keep_prob: self.dropout_prob})
 
     def close_writers(self):
+        """ Closes tensorboard writers """
         self.train_writer.close()
         self.valid_writer.close()
 
