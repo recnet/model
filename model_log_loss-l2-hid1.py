@@ -252,7 +252,7 @@ class Model(object):
                                               self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
-            self.train_batch()
+            training_error = self.train_batch()
             validation_error = self.validate_batch()
 
             # error_sum += error
@@ -260,14 +260,9 @@ class Model(object):
 
             # Don't validate so often
             if i % (self.data.train_size//self.batch_size//10) == 0 and i:
-                avg_val_err = val_error_sum/i
-                avg_trn_err = error_sum/i
-                # print("Training... Epoch: {:d}, Done: {:%}" \
-                #     .format(epoch, done))
-                # print("Training error {:f} ({:f})" \
-                #       .format( error, avg_trn_err))
-                print("Validation error: {:f} ({:f}))" \
-                    .format(validation_error, avg_val_err))
+                done = self.data.percent_of_epoch
+                print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}" \
+                    .format(validation_error, training_error, done))
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
