@@ -52,6 +52,9 @@ class Model(object):
         self.users_to_select = config['users_to_select']
         self.hidden_neurons = config['hidden_neurons']
         self.l2_factor = config['l2_factor']
+        self.use_l2_loss = config['use_l2_loss']
+        self.use_dropout = config['use_dropout']
+        
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -148,11 +151,15 @@ class Model(object):
         # Regularization(L2)
         # If more layers are added these should be added as a l2_loss term in
         # the regularization function (both weight and bias).
-        cross_entropy = tf.reduce_mean(error \
-            + self.l2_factor * tf.nn.l2_loss(sigmoid_weights) \
-            + self.l2_factor * tf.nn.l2_loss(sigmoid_bias) \
-            + self.l2_factor * tf.nn.l2_loss(hid1_weights) \
-            + self.l2_factor * tf.nn.l2_loss(hid1_bias))
+        cross_entropy = None
+        if self.use_l2_loss:
+            cross_entropy = tf.reduce_mean(error \
+                + self.l2_factor * tf.nn.l2_loss(sigmoid_weights) \
+                + self.l2_factor * tf.nn.l2_loss(sigmoid_bias) \
+                + self.l2_factor * tf.nn.l2_loss(hid1_weights) \
+                + self.l2_factor * tf.nn.l2_loss(hid1_bias))
+        else:
+            cross_entropy = tf.reduce_mean(error)
 
         self.error = cross_entropy
         self.train_op = tf.train.AdamOptimizer(

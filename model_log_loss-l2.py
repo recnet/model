@@ -51,6 +51,7 @@ class Model(object):
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
         self.l2_factor = config['l2_factor']
+        self.use_l2_loss = config['use_l2_loss']
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -129,9 +130,13 @@ class Model(object):
         # Regularization(L2)
         # If more layers are added these should be added as a l2_loss term in
         # the regularization function (both weight and bias).
-        cross_entropy = tf.reduce_mean(error \
-            + self.l2_factor * tf.nn.l2_loss(sigmoid_weights) \
-            + self.l2_factor * tf.nn.l2_loss(sigmoid_bias))
+        cross_entropy = None
+        if self.use_l2_loss:
+            cross_entropy = tf.reduce_mean(error \
+                + self.l2_factor * tf.nn.l2_loss(sigmoid_weights) \
+                + self.l2_factor * tf.nn.l2_loss(sigmoid_bias))
+        else:
+            cross_entropy = tf.reduce_mean(error)
 
         self.error = cross_entropy
         self.train_op = tf.train.AdamOptimizer(
