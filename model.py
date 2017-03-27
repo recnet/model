@@ -40,15 +40,7 @@ from writer import log_config
 # TODO Separera checkpoints ut ur modell klassen
 class Model(object):
     def __init__(self, config, session):
-        self.config = config
         self._session = session
-        self._input = None
-        self._target = None
-        self.softmax = None
-        self.train_op = None
-        self.error = None
-        self._init_op = None
-        self.saver = None
         self.latest_layer = None
         self.output_weights = None
         self.output_bias = None
@@ -63,6 +55,21 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
+        if config['use_l2_loss']:
+            self.use_l2_loss = config['use_l2_loss']
+        self.l2_factor = config['l2_factor']
+        self.use_dropout = config['use_dropout']
+        self.dropout_prob = config['dropout_prob'] # Only used for train op
+
+        # Will be set in build_graph
+        self._input = None
+        self._target = None
+        self.sigmoid = None
+        self.train_op = None
+        self.error = None
+        self._init_op = None
+        self.saver = None
+        self.epoch = None
 
         self.logging_dir = build_structure(config)
         self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
@@ -70,17 +77,18 @@ class Model(object):
         self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN)
         self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
 
-        self.build_graph()
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
-            self.load_checkpoint()
 
     def build_graph(self):
+        """ Builds the computational graph """
+        self.epoch = tf.Variable(0, dtype=tf.int32, name="train_epoch")
+
         self._input = tf.placeholder(tf.int32,
                                      [None, self.max_title_length],
                                      name="input")
 
-        self._target = tf.placeholder(tf.int32,
+        self._target = tf.placeholder(tf.float64,
                                       [None, self.user_count],
                                       name="target")
 
@@ -123,14 +131,27 @@ class Model(object):
         error = tf.nn.softmax_cross_entropy_with_logits(labels=self._target,
                                                         logits=logits)
 
-        cross_entropy = tf.reduce_mean(error)
-
-        self.train_op = tf \
-            .train \
-            .AdamOptimizer(self.learning_rate) \
-            .minimize(cross_entropy)
+        # Regularization(L2)
+        # If more layers are added these should be added as a l2_loss term in
+        # the regularization function (both weight and bias).
+        cross_entropy = None
+        if self.use_l2_loss:
+            cross_entropy = tf.reduce_mean(error \
+                                           + self.l2_factor * tf.nn.l2_loss(self.output_weights) \
+                                           + self.l2_factor * tf.nn.l2_loss(self.output_bias) \
+                                           + self.l2_term * self.l2_factor)
+        else:
+            cross_entropy = tf.reduce_mean(error)
 
         self.error = cross_entropy
+        self.train_op = tf.train.AdamOptimizer(
+            self.learning_rate).minimize(cross_entropy)
+
+        self.sigmoid = tf.nn.sigmoid(logits)
+
+        # Defne error function
+        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target,
+                                                        logits=logits)
 
         # Cast a tensor to booleans, where top k are True, else False
         top_k_to_bool = lambda x: tf.greater_equal(
@@ -258,12 +279,13 @@ class ModelBuilder(object):
     """A class following the builder pattern to create a model"""
 
     def __init__(self, config, session):
-        self.model = Model(config, session)
-        self.model.build_graph()
+        self._model = Model(config, session)
+        self._model.build_graph()
+        self._model.load_checkpoint()
         self.added_layers = False
         self.number_of_layers = 0
 
-    def add_layer(self, number_of_neurons, l2=False, dropout=False):
+    def add_layer(self, number_of_neurons):
         """Adds a layer between latest added layer and the output layer"""
 
         self.number_of_layers += 1
@@ -271,14 +293,14 @@ class ModelBuilder(object):
         if not self.added_layers:
             self.added_layers = True
             weights = tf.Variable(tf.random_normal(
-                [self.model.lstm_neurons, number_of_neurons],
+                [self._model.lstm_neurons, number_of_neurons],
                 stddev=0.35,
                 dtype=tf.float64),
-                                    name="weights" + self.number_of_layers)
+                                    name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
-                                   name="biases" + self.number_of_layers)
+                                   name="biases" + str(self.number_of_layers))
 
         else:
 
@@ -286,50 +308,69 @@ class ModelBuilder(object):
                 [number_of_neurons.shape()[1], number_of_neurons],
                 stddev=0.35,
                 dtype=tf.float64),
-                                name="weights" + self.number_of_layers)
+                                name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
                                                  stddev=0.35,
                                                  dtype=tf.float64),
-                                name="biases" + self.number_of_layers)
+                                name="biases" + str(self.number_of_layers))
 
 
-            self.model.output_weights = tf.Variable(tf.random_normal(
-                                                [number_of_neurons, self.model.user_count],
+            self._model.output_weights = tf.Variable(tf.random_normal(
+                                                [number_of_neurons, self._model.user_count],
                                                 stddev=0.35,
                                                 dtype=tf.float64),
-                                name="weights" + self.number_of_layers)
+                                name="weights" + str(self.number_of_layers))
 
-            self.model.output_biases = tf.Variable(tf.random_normal([self.model.user_count],
+            self._model.output_biases = tf.Variable(tf.random_normal([self._model.user_count],
                                                  stddev=0.35,
                                                  dtype=tf.float64),
-                                name="biases" + self.number_of_layers)
+                                name="biases" + str(self.number_of_layers))
 
-        logits = tf.matmul(self.model.latest_layer, weights) + bias
-        self.model.latest_layer = tf.nn.relu_layer(logits)
+        logits = tf.matmul(self._model.latest_layer, weights) + bias
+        self._model.latest_layer = tf.nn.relu_layer(logits)
 
-        if l2:
-            self.model.l2_term += tf.nn.l2_loss(weights) + tf.nn.l2_loss(bias)
+        if self._model.use_l2_loss:
+            self._model.l2_term += tf.nn.l2_loss(weights) + tf.nn.l2_loss(bias)
+        if self._model.use_dropout:
+            self._model.latest_layer = tf.nn.dropout(self._model.latest_layer,
+                                                    self._model.dropout_prob)
+        return self
 
-        # todo implement dropout
-        if dropout:
-            pass
-
+    def build(self):
+        return self._model
 
 def main():
     """ A main method that creates the model and starts training it """
     with tf.Session() as sess:
         first_config = 0
-        model = Model(networkconfig[first_config], sess)
+        model_builder = ModelBuilder(networkconfig[first_config], sess)
+        model = model_builder.build()
         model.train()
         model.close_writers()
 
     tf.reset_default_graph() #Must reset graph because tensorflow doesn't do it. Must be outside of a session and before next session.
     with tf.Session() as sess:
         second_config = 1
-        modelTwo = Model(networkconfig[second_config], sess)
-        modelTwo.train()
-        modelTwo.close_writers()
+        model_builder = ModelBuilder(networkconfig[second_config], sess)
+        model_two = model_builder.build()
+        model_two.train()
+        model_two.close_writers()
 
+    tf.reset_default_graph()
+    with tf.Session() as sess:
+        third_config = 2
+        model_builder = ModelBuilder(networkconfig[third_config], sess)
+        model_three = model_builder.build()
+        model_three.train()
+        model_three.close_writers()
+
+    tf.reset_default_graph()
+    with tf.Session() as sess:
+        fourth_config = 3
+        model_builder = ModelBuilder(networkconfig[fourth_config], sess)
+        model_four = model_builder.add_layer(300).build()
+        model_four.train()
+        model_four.close_writers()
 
 if __name__ == "__main__":
     main()
