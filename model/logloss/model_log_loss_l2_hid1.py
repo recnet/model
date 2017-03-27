@@ -32,7 +32,6 @@ import os.path
 import tensorflow as tf
 from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
 from ..util import data as data
-from ..util.networkconfig import yamlconfig as networkconfig
 from ..util.folder_builder import build_structure
 from ..util.writer import log_config
 
@@ -306,14 +305,3 @@ class LogLossRegularisedHidden(object):
         """ Closes tensorboard writers """
         self.train_writer.close()
         self.valid_writer.close()
-
-def main():
-    """ A main method that creates the model and starts training it """
-    with tf.Session() as sess:
-        config = 5
-        model = LogLossRegularisedHidden(networkconfig[config], sess)
-        model.train()
-        model.close_writers()
-
-if __name__ == "__main__":
-    main()
