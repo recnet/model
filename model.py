@@ -304,15 +304,16 @@ class ModelBuilder(object):
                                                  dtype=tf.float64),
                                 name="biases" + self.number_of_layers)
 
-
         logits = tf.matmul(self.model.latest_layer, weights) + bias
         self.model.latest_layer = tf.nn.relu_layer(logits)
 
         if l2:
             self.model.l2_term += tf.nn.l2_loss(weights) + tf.nn.l2_loss(bias)
 
-        if dropout:
         # todo implement dropout
+        if dropout:
+            pass
+
 
 def main():
     """ A main method that creates the model and starts training it """
