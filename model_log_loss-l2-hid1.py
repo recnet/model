@@ -224,31 +224,24 @@ class Model(object):
 
         # Compute validation error
         val_data, val_labels = self.data.get_validation()
-        validation_summary = self._session.run(self.prec_sum_validation,
-                                               {self._input: val_data,
-                                                self._target: val_labels,
-                                                self._keep_prob: 1.0})
+        val_prec, val_err = self._session.run([self.prec_sum_validation,
+                                               self.error_sum],
+                                              {self._input: val_data,
+                                               self._target: val_labels,
+                                               self._keep_prob: 1.0})
 
-        self.valid_writer.add_summary(validation_summary, epoch)
-        validation_err_summary = self._session.run(self.error_sum,
-                                                   {self._input: val_data,
-                                                    self._target: val_labels,
-                                                    self._keep_prob: 1.0})
-        self.valid_writer.add_summary(validation_err_summary, epoch)
+        self.valid_writer.add_summary(val_prec, epoch)
+        self.valid_writer.add_summary(val_err, epoch)
 
         # Compute training error
         train_data, train_labels = self.data.get_training()
-        training_summary = self._session.run(self.prec_sum_training,
-                                             {self._input: train_data,
-                                              self._target: train_labels,
-                                              self._keep_prob: 1.0})
-        self.train_writer.add_summary(training_summary, epoch)
-        training_err_summary = self._session.run(self.error_sum,
-                                                 {self._input: train_data,
-                                                  self._target: train_labels,
-                                                  self._keep_prob: 1.0})
-        self.train_writer.add_summary(training_err_summary, epoch)
-        return None
+        train_prec, train_err = self._session.run([self.prec_sum_training,
+                                                   self.error_sum],
+                                                  {self._input: train_data,
+                                                   self._target: train_labels,
+                                                   self._keep_prob: 1.0})
+        self.train_writer.add_summary(train_prec, epoch)
+        self.train_writer.add_summary(train_err, epoch)
 
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
