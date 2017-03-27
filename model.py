@@ -190,9 +190,11 @@ class Model(object):
         path = path or self.checkpoints_dir
         self.saver.save(self._session, path)
 
-    def validate(self, epoch):
+    def validate(self):
         """ Validates the model and returns the final precision """
         print("Starting validation...")
+        # Evaluate epoch
+        epoch = self.epoch.eval(self._session)
 
         val_data, val_labels = self.data.get_validation()
         summary = self._session.run(self.prec_sum, {self._input: val_data, self._target: val_labels})
@@ -226,6 +228,9 @@ class Model(object):
         error_sum = 0
         val_error_sum = 0
         old_epoch = 0
+
+        if self.epoch.eval(self._session) == 0:
+            self.validate()
         # Train for a specified amount of epochs
 
         for i in self.data.for_n_train_epochs(self.training_epochs,
@@ -250,9 +255,10 @@ class Model(object):
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
+                self._session.run(self.epoch.assign_add(1))
                 print("Epoch complete...old ", old_epoch)
                 self.save_checkpoint()
-                self.validate(old_epoch)
+                self.validate()
             old_epoch = epoch
 
             # Save model when done training
@@ -327,7 +333,7 @@ class ModelBuilder(object):
                                 name="biases" + str(self.number_of_layers))
 
         logits = tf.matmul(self._model.latest_layer, weights) + bias
-        self._model.latest_layer = tf.nn.relu_layer(logits)
+        self._model.latest_layer = tf.nn.relu(logits)
 
         if self._model.use_l2_loss:
             self._model.l2_term += tf.nn.l2_loss(weights) + tf.nn.l2_loss(bias)
