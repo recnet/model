@@ -49,6 +49,10 @@ class Model(object):
         self.error = None
         self._init_op = None
         self.saver = None
+        self.latest_layer = None
+        self.output_weights = None
+        self.output_bias = None
+        self.l2_term = 0
 
         self.vocabulary_size = config['vocabulary_size']
         self.user_count = config['user_count']
@@ -97,19 +101,22 @@ class Model(object):
 
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
+
+        self.latest_layer = output
+
         # Feed the output of the LSTM layer to a softmax layer
-        softmax_weights = tf.Variable(tf.random_normal(
+        self.output_weights = tf.Variable(tf.random_normal(
             [self.lstm_neurons, self.user_count],
             stddev=0.35,
             dtype=tf.float64),
             name="weights")
 
-        softmax_bias = tf.Variable(tf.random_normal([self.user_count],
+        self.output_bias = tf.Variable(tf.random_normal([self.user_count],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
                                    name="biases")
 
-        logits = tf.matmul(output, softmax_weights) + softmax_bias
+        logits = tf.matmul(output, self.output_weights) + self.output_bias
         self.softmax = tf.nn.softmax(logits)
 
         # Defne error function
