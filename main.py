@@ -21,20 +21,20 @@ def main():
 def get_model(model_type, config_file, session):
     """ Uses the config ID to return the correct model implementation """
     if model_type == "basic":
-        from model.basic.basic_model import SoftmaxModel
-        return SoftmaxModel(config_file, session)
+        from model.basic.basic_model import Model
+        return Model(config_file, session)
     elif model_type == "logloss/basic":
-        from model.logloss.basic_model_log_loss import LogLossModel
-        return LogLossModel(config_file, session)
+        from model.logloss.basic_model_log_loss import Model
+        return Model(config_file, session)
     elif model_type == "logloss/regularised/0-hidden":
-        from model.logloss.model_log_loss_l2 import LogLossRegularised
-        return LogLossRegularised(config_file, session)
+        from model.logloss.model_log_loss_l2 import Model
+        return Model(config_file, session)
     elif model_type == "logloss/regularised/1-hidden":
-        from model.logloss.model_log_loss_l2_hid1 import LogLossRegularisedHidden
-        return LogLossRegularisedHidden(config_file, session)
+        from model.logloss.model_log_loss_l2_hid1 import Model
+        return Model(config_file, session)
     else:
-        from model.basic.basic_model import SoftmaxModel
-        return SoftmaxModel(config_file, session)
+        from model.basic.basic_model import Model
+        return Model(config_file, session)
 
 if __name__ == "__main__":
     main()

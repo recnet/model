@@ -35,7 +35,7 @@ from ..util import data as data
 from ..util.folder_builder import build_structure
 from ..util.writer import log_config
 
-class LogLossRegularised(object):
+class Model(object):
     """ A model representing our neural network """
 
     def __init__(self, config, session):

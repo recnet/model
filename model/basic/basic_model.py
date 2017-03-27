@@ -37,7 +37,7 @@ from ..util.writer import log_config
 
 
 # TODO Separera checkpoints ut ur modell klassen
-class SoftmaxModel(object):
+class Model(object):
     def __init__(self, config, session):
         self.config = config
         self._session = session
