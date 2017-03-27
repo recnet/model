@@ -50,7 +50,7 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
-        self.beta = config['beta']
+        self.l2_factor = config['l2_factor']
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -84,7 +84,8 @@ class Model(object):
                                       [None, self.user_count],
                                       name="target")
 
-        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
+        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons,         
+                                             state_is_tuple=True)
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
@@ -122,18 +123,17 @@ class Model(object):
         self.sigmoid = tf.nn.sigmoid(logits)
 
         # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target, logits=logits)
-
-        cross_entropy = tf.reduce_mean(error)
-        self.error = cross_entropy
-
-        # Todo not sure if regularization should be before or after self.error
+        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target,
+                                                        logits=logits)
 
         # Regularization(L2)
-        # If more layers are added these should be added as a l2_loss term in the regularization function
-        regualarization = tf.nn.l2_loss(sigmoid_weights)
-        cross_entropy = tf.reduce_mean(cross_entropy + self.beta * regualarization)
+        # If more layers are added these should be added as a l2_loss term in
+        # the regularization function (both weight and bias).
+        cross_entropy = tf.reduce_mean(error \
+            + self.l2_factor * tf.nn.l2_loss(sigmoid_weights) \
+            + self.l2_factor * tf.nn.l2_loss(sigmoid_bias))
 
+        self.error = cross_entropy
         self.train_op = tf.train.AdamOptimizer(
             self.learning_rate).minimize(cross_entropy)
 
