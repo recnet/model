@@ -22,8 +22,8 @@
 # SOFTWARE.
 # ==============================================================================
 
-from definitions import LOGS_DIR
 import os
+from definitions import LOGS_DIR
 
 def log_config(config):
     filename = 'README.txt'

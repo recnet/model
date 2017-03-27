@@ -30,11 +30,11 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-import data
-from networkconfig import yamlconfig as networkconfig
-from folder_builder import build_structure
-from writer import log_config
 from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
+from ..util import data as data
+from ..util.networkconfig import yamlconfig as networkconfig
+from ..util.folder_builder import build_structure
+from ..util.writer import log_config
 
 class Model(object):
     """ A model representing our neural network """

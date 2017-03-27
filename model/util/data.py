@@ -25,9 +25,9 @@
 A module for handling training, validation and test data for the ANN model
 """
 
-import helper as helper
 import logging
-from csv_reader import CsvReader, Dataenum
+from . import helper
+from .csv_reader import CsvReader, Dataenum
 
 class Data(object):
     def __init__(self, networkconfig):
