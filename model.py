@@ -246,6 +246,67 @@ class Model(object):
         self.train_writer.close()
         self.valid_writer.close()
 
+
+class ModelBuilder(object):
+    """A class following the builder pattern to create a model"""
+
+    def __init__(self, config, session):
+        self.model = Model(config, session)
+        self.model.build_graph()
+        self.added_layers = False
+        self.number_of_layers = 0
+
+    def add_layer(self, number_of_neurons, l2=False, dropout=False):
+        """Adds a layer between latest added layer and the output layer"""
+
+        self.number_of_layers += 1
+
+        if not self.added_layers:
+            self.added_layers = True
+            weights = tf.Variable(tf.random_normal(
+                [self.model.lstm_neurons, number_of_neurons],
+                stddev=0.35,
+                dtype=tf.float64),
+                                    name="weights" + self.number_of_layers)
+            bias = tf.Variable(tf.random_normal([number_of_neurons],
+                                                    stddev=0.35,
+                                                    dtype=tf.float64),
+                                   name="biases" + self.number_of_layers)
+
+        else:
+
+            weights = tf.Variable(tf.random_normal(
+                [number_of_neurons.shape()[1], number_of_neurons],
+                stddev=0.35,
+                dtype=tf.float64),
+                                name="weights" + self.number_of_layers)
+            bias = tf.Variable(tf.random_normal([number_of_neurons],
+                                                 stddev=0.35,
+                                                 dtype=tf.float64),
+                                name="biases" + self.number_of_layers)
+
+
+            self.model.output_weights = tf.Variable(tf.random_normal(
+                                                [number_of_neurons, self.model.user_count],
+                                                stddev=0.35,
+                                                dtype=tf.float64),
+                                name="weights" + self.number_of_layers)
+
+            self.model.output_biases = tf.Variable(tf.random_normal([self.model.user_count],
+                                                 stddev=0.35,
+                                                 dtype=tf.float64),
+                                name="biases" + self.number_of_layers)
+
+
+        logits = tf.matmul(self.model.latest_layer, weights) + bias
+        self.model.latest_layer = tf.nn.relu_layer(logits)
+
+        if l2:
+            self.model.l2_term += tf.nn.l2_loss(weights) + tf.nn.l2_loss(bias)
+
+        if dropout:
+        # todo implement dropout
+
 def main():
     """ A main method that creates the model and starts training it """
     with tf.Session() as sess:
