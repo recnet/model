@@ -41,6 +41,7 @@ from writer import log_config
 class Model(object):
     def __init__(self, config, session):
         self._session = session
+        self.output_layer = None
         self.latest_layer = None
         self.output_weights = None
         self.output_bias = None
@@ -86,6 +87,7 @@ class Model(object):
         self._init_op = None
         self.saver = None
         self.epoch = None
+        self._keep_prob = None
 
         self.logging_dir = build_structure(config)
         self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
@@ -108,6 +110,8 @@ class Model(object):
                                       [None, self.user_count],
                                       name="target")
 
+        self._keep_prob = tf.placeholder(tf.float64, name="keep_prob")
+
         lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
 
         # Embedding matrix for the words
@@ -127,69 +131,6 @@ class Model(object):
         output = outputs[-1]
 
         self.latest_layer = output
-
-        # Feed the output of the LSTM layer to a softmax layer
-        self.output_weights = tf.Variable(tf.random_normal(
-            [self.lstm_neurons, self.user_count],
-            stddev=0.35,
-            dtype=tf.float64),
-            name="weights")
-
-        self.output_bias = tf.Variable(tf.random_normal([self.user_count],
-                                                    stddev=0.35,
-                                                    dtype=tf.float64),
-                                   name="biases")
-
-        logits = tf.matmul(output, self.output_weights) + self.output_bias
-        self.softmax = tf.nn.softmax(logits)
-
-        # Defne error function
-        error = tf.nn.softmax_cross_entropy_with_logits(labels=self._target,
-                                                        logits=logits)
-
-        # Regularization(L2)
-        # If more layers are added these should be added as a l2_loss term in
-        # the regularization function (both weight and bias).
-        cross_entropy = None
-        if self.use_l2_loss:
-            cross_entropy = tf.reduce_mean(error \
-                                           + self.l2_factor * tf.nn.l2_loss(self.output_weights) \
-                                           + self.l2_factor * tf.nn.l2_loss(self.output_bias) \
-                                           + self.l2_term * self.l2_factor)
-        else:
-            cross_entropy = tf.reduce_mean(error)
-
-        self.error = cross_entropy
-        self.train_op = tf.train.AdamOptimizer(
-            self.learning_rate).minimize(cross_entropy)
-
-        self.sigmoid = tf.nn.sigmoid(logits)
-
-        # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target,
-                                                        logits=logits)
-
-        # Cast a tensor to booleans, where top k are True, else False
-        top_k_to_bool = lambda x: tf.greater_equal(
-            x, tf.reduce_min(tf.nn.top_k(x, k=self.users_to_select)[0]))
-
-        # Convert all probibalistic predictions to discrete predictions
-        self.predictions = tf.map_fn(top_k_to_bool, self.softmax, dtype=tf.bool)
-        self.precision = tf.metrics.precision(self._target,
-                                              self.predictions)  # Need to create two different, because they have internal memory of old values
-        self.precision_copy = tf.metrics.precision(self._target, self.predictions)
-
-        # Last step
-        self._init_op = tf.group(tf.global_variables_initializer(),
-                                 tf.local_variables_initializer())
-
-        self.error_sum = tf.summary.scalar('cross_entropy', self.error)
-
-        self.prec_sum = tf.summary.scalar('precision', self.precision[
-            1])  # Need to create two different, because they have internal memory of old values
-        self.prec_sum_copy = tf.summary.scalar('precision', self.precision_copy[1])
-
-        self.saver = tf.train.Saver()
 
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
@@ -212,19 +153,26 @@ class Model(object):
         # Evaluate epoch
         epoch = self.epoch.eval(self._session)
 
+        # Compute validation error
         val_data, val_labels = self.data.get_validation()
-        summary = self._session.run(self.prec_sum, {self._input: val_data, self._target: val_labels})
-        self.valid_writer.add_summary(summary, epoch)
-        errSum = self._session.run(self.error_sum, {self._input: val_data, self._target: val_labels})
-        self.valid_writer.add_summary(errSum, epoch)
+        val_prec, val_err = self._session.run([self.prec_sum_validation,
+                                               self.error_sum],
+                                              {self._input: val_data,
+                                               self._target: val_labels,
+                                               self._keep_prob: 1.0})
 
-        train_data, train_labels = self.data.get_testing()  # HUGE NOTE: in the data class, change testing file to be the same as training file to compare validation vs training dataset :)
-        sum = self._session.run(self.prec_sum_copy,
-                                {self._input: train_data,
-                                 self._target: train_labels})
-        self.train_writer.add_summary(sum, epoch)
-        errSum = self._session.run(self.error_sum, {self._input: train_data, self._target: train_labels})
-        self.train_writer.add_summary(errSum, epoch)
+        self.valid_writer.add_summary(val_prec, epoch)
+        self.valid_writer.add_summary(val_err, epoch)
+
+        # Compute training error
+        train_data, train_labels = self.data.get_training()
+        train_prec, train_err = self._session.run([self.prec_sum_training,
+                                                   self.error_sum],
+                                                  {self._input: train_data,
+                                                   self._target: train_labels,
+                                                   self._keep_prob: 1.0})
+        self.train_writer.add_summary(train_prec, epoch)
+        self.train_writer.add_summary(train_err, epoch)
         return None
 
     def validate_batch(self):
@@ -303,7 +251,6 @@ class ModelBuilder(object):
     def __init__(self, config, session):
         self._model = Model(config, session)
         self._model.build_graph()
-        self._model.load_checkpoint()
         self.added_layers = False
         self.number_of_layers = 0
 
@@ -325,25 +272,12 @@ class ModelBuilder(object):
                                    name="biases" + str(self.number_of_layers))
 
         else:
-
             weights = tf.Variable(tf.random_normal(
-                [number_of_neurons.shape()[1], number_of_neurons],
+                [self._model.latest_layer.get_shape()[1].value, number_of_neurons],
                 stddev=0.35,
                 dtype=tf.float64),
                                 name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
-                                                 stddev=0.35,
-                                                 dtype=tf.float64),
-                                name="biases" + str(self.number_of_layers))
-
-
-            self._model.output_weights = tf.Variable(tf.random_normal(
-                                                [number_of_neurons, self._model.user_count],
-                                                stddev=0.35,
-                                                dtype=tf.float64),
-                                name="weights" + str(self.number_of_layers))
-
-            self._model.output_biases = tf.Variable(tf.random_normal([self._model.user_count],
                                                  stddev=0.35,
                                                  dtype=tf.float64),
                                 name="biases" + str(self.number_of_layers))
@@ -358,23 +292,90 @@ class ModelBuilder(object):
                                                     self._model.dropout_prob)
         return self
 
+    def add_output_layer(self):
+        """Adds an output layer, including error and optimisation functions.
+           After this method no new layers should be added."""
+
+        # Output layer
+        # Feed the output of the previous layer to a sigmoid layer
+        sigmoid_weights = tf.Variable(tf.random_normal(
+            [self._model.latest_layer.get_shape()[1].value, self._model.user_count],
+            stddev=0.35,
+            dtype=tf.float64),
+            name="weights")
+
+        sigmoid_bias = tf.Variable(tf.random_normal([self._model.user_count],
+                                                    stddev=0.35,
+                                                    dtype=tf.float64),
+                                   name="biases")
+
+        logits = tf.matmul(self._model.latest_layer, sigmoid_weights) + sigmoid_bias
+        self._model.sigmoid = tf.nn.sigmoid(logits)
+
+        # Training
+
+        # Defne error function
+        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._model._target,
+                                                        logits=logits)
+
+        if self._model.use_l2_loss:
+            cross_entropy = tf.reduce_mean(error
+                                           + self._model.l2_factor * tf.nn.l2_loss(sigmoid_weights)
+                                           + self._model.l2_factor * tf.nn.l2_loss(sigmoid_bias)
+                                           + self._model.l2_factor * self._model.l2_term)
+        else:
+            cross_entropy = tf.reduce_mean(error)
+
+        self._model.error = cross_entropy
+        self._model.train_op = tf.train.AdamOptimizer(
+            self._model.learning_rate).minimize(cross_entropy)
+
+        return self
+
+    def add_precision_operations(self):
+        """Adds precision operation and tensorboard operations"""
+        # Cast a tensor to booleans, where top k are True, else False
+        top_k_to_bool = lambda x: tf.greater_equal(
+            x, tf.reduce_min(
+                tf.nn.top_k(x, k=self._model.users_to_select)[0]))
+
+        # Convert all probibalistic predictions to discrete predictions
+        self._model.predictions = tf.map_fn(top_k_to_bool, self._model.sigmoid, dtype=tf.bool)
+        # Need to create two different precisions, because they have
+        # internal memory of old values
+        self._model.precision_validation = tf.metrics.precision(self._model._target,
+                                                         self._model.predictions)
+        self._model.precision_training = tf.metrics.precision(self._model._target,
+                                                       self._model.predictions)
+        self._model.error_sum = tf.summary.scalar('cross_entropy', self._model.error)
+
+        # Need to create two different, because they have internal memory
+        # of old values
+        self._model.prec_sum_validation = \
+            tf.summary.scalar('precision', self._model.precision_validation[1])
+        self._model.prec_sum_training = \
+            tf.summary.scalar('precision', self._model.precision_training[1])
+
+        return self
+
     def build(self):
+        """Adds saver and init operation and returns the model"""
+        self._model._init_op = tf.group(tf.global_variables_initializer(),
+                                        tf.local_variables_initializer())
+        self._model.saver = tf.train.Saver()
+        self._model.load_checkpoint()
         return self._model
 
 def main():
     """ A main method that creates the model and starts training it """
     with tf.Session() as sess:
-        third_config = 2
-        model_builder = ModelBuilder(networkconfig[third_config], sess)
-        model_three = model_builder.build()
-        model_three.train()
-        model_three.close_writers()
-
-    tf.reset_default_graph()
-    with tf.Session() as sess:
         fourth_config = 3
         model_builder = ModelBuilder(networkconfig[fourth_config], sess)
-        model_four = model_builder.add_layer(300).build()
+        model_four = model_builder.\
+            add_layer(400).\
+            add_output_layer().\
+            add_precision_operations().\
+            build()
         model_four.train()
         model_four.close_writers()
 
