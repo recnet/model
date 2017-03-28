@@ -55,11 +55,27 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
-        if config['use_l2_loss']:
+
+        if 'use_l2_loss' in config:
             self.use_l2_loss = config['use_l2_loss']
-        self.l2_factor = config['l2_factor']
-        self.use_dropout = config['use_dropout']
-        self.dropout_prob = config['dropout_prob'] # Only used for train op
+        else:
+            self.use_l2_loss = False
+
+        if 'l2_factor' in config:
+            self.l2_factor = config['l2_factor']
+        else:
+            print("I: No l2 factor found, l2 regularisation have been turned off")
+            self.use_l2_loss = False
+
+        if 'use_dropout' in config:
+            self.use_dropout = config['use_dropout']
+        else:
+            self.use_dropout = False
+
+        if 'dropout_prob' in config:
+            self.dropout_prob = config['dropout_prob'] # Only used for train op
+        else:
+            print("I: No dropout probability found, dropout have been turn off")
 
         # Will be set in build_graph
         self._input = None
@@ -347,22 +363,6 @@ class ModelBuilder(object):
 
 def main():
     """ A main method that creates the model and starts training it """
-    with tf.Session() as sess:
-        first_config = 0
-        model_builder = ModelBuilder(networkconfig[first_config], sess)
-        model = model_builder.build()
-        model.train()
-        model.close_writers()
-
-    tf.reset_default_graph() #Must reset graph because tensorflow doesn't do it. Must be outside of a session and before next session.
-    with tf.Session() as sess:
-        second_config = 1
-        model_builder = ModelBuilder(networkconfig[second_config], sess)
-        model_two = model_builder.build()
-        model_two.train()
-        model_two.close_writers()
-
-    tf.reset_default_graph()
     with tf.Session() as sess:
         third_config = 2
         model_builder = ModelBuilder(networkconfig[third_config], sess)
