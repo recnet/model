@@ -202,9 +202,7 @@ class Model(object):
         """ Validates a batch of data and returns cross entropy error """
         with tf.device("/cpu:0"):
             data_batch, label_batch = self.data.next_valid_batch()
-        print(sum(self._session.run(self.predictions,
-                                feed_dict={self._input: data_batch,
-                                           self._target: label_batch})[0]))
+
         return self._session.run(self.error,
                                  feed_dict={self._input: data_batch,
                                             self._target: label_batch})
