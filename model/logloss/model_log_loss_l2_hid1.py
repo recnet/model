@@ -176,12 +176,27 @@ class Model(object):
 
         # Convert all probibalistic predictions to discrete predictions
         self.predictions = tf.map_fn(greater_than_avg, self.sigmoid, dtype=tf.bool)
+
+        # Calculate precision
         # Need to create two different precisions, because they have
         # internal memory of old values
         self.precision_validation = tf.metrics.precision(self._target,
                                                          self.predictions)
         self.precision_training = tf.metrics.precision(self._target,
                                                        self.predictions)
+        # Calculate recall
+        self.recall_validation = tf.metrics.recall(labels=self._target,
+                                                   predictions=self.predictions)
+        self.recall_training = tf.metrics.recall(labels=self._target,
+                                                 predictions=self.predictions)
+
+        # Calculate F1-score: 2 * (prec * recall) / (prec + recall)
+        self.f1_score_validation = tf.matmul(2, tf.truediv( \
+            tf.matmul(self.precision_validation, self.recall_validation), \
+            tf.add(self.precision_validation, self.recall_validation)))
+        self.f1_score_training = tf.matmul(2, tf.truediv( \
+            tf.matmul(self.precision_training, self.recall_training), \
+            tf.add(self.precision_training, self.recall_training)))
 
         # Last step
         self._init_op = tf.group(tf.global_variables_initializer(),
