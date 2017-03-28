@@ -149,13 +149,12 @@ class Model(object):
         self.train_op = tf.train.AdamOptimizer(
             self.learning_rate).minimize(cross_entropy)
 
-        # Cast a tensor to booleans, where top k are True, else False
-        top_k_to_bool = lambda x: tf.greater_equal(
-            x, tf.reduce_min(
-                tf.nn.top_k(x, k=self.users_to_select)[0]))
+        # Cast a tensor to booleans, x above mean are True, else False
+        greater_than_avg = lambda x: tf.greater_equal(
+            x, tf.reduce_mean(x))
 
         # Convert all probibalistic predictions to discrete predictions
-        self.predictions = tf.map_fn(top_k_to_bool, self.sigmoid, dtype=tf.bool)
+        self.predictions = tf.map_fn(greater_than_avg, self.sigmoid, dtype=tf.bool)
         # Need to create two different precisions, because they have
         # internal memory of old values
         self.precision_validation = tf.metrics.precision(self._target,
