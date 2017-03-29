@@ -71,35 +71,35 @@ def get_indicies(sentence, dictionary, max_words):
     sentence = sentence.split()
     result = [0] * max_words
     sentence_len = len(sentence)
-    countPresent, countAbsent = 0, 0
+    count_present, count_absent = 0, 0
     if sentence_len < max_words:
         return pad(sentence, dictionary, max_words)
     for i, word in enumerate(sentence):
         if i > max_words-1:
-            return result, countPresent, countAbsent
+            return result, count_present, count_absent
         if word in dictionary:
-            countPresent += 1
+            count_present += 1
             result[i] = dictionary[word]
         else:
-            countAbsent +=1
+            count_absent += 1
             result[i] = 0
-    return result, countPresent, countAbsent
+    return result, count_present, count_absent
 
 
 def pad(sentence, dictionary, max_words):
     result = [0] * max_words
     sentence_len = len(sentence)
-    countPresent, countAbsent = 0, 0
+    count_present, count_absent = 0, 0
     for i, word in enumerate(sentence):
         if max_words - sentence_len + i > max_words:
-            return result, countPresent, countAbsent
+            return result, count_present, count_absent
         if word in dictionary:
-            countPresent += 1
+            count_present += 1
             result[max_words - sentence_len + i] = dictionary[word]
         else:
-            countAbsent += 1
+            count_absent += 1
             result[max_words - sentence_len + i] = 0
-    return result, countPresent, countAbsent
+    return result, count_present, count_absent
 
 
 def label_vector(users, dic, max_users):

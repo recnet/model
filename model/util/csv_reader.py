@@ -80,14 +80,14 @@ class CsvReader:
             matrix.append(np.random.rand(1, dimension_size)[0].tolist())
 
             for row in reader:
-                firstCol = row[0]
+                first_col = row[0]
 
-                if firstCol in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
+                if first_col in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
                     continue
 
-                if firstCol[0] == '<': #some words are tokens for usernames like <user> or <caps> etc, ignore them.
+                if first_col[0] == '<': #some words are tokens for usernames like <user> or <caps> etc, ignore them.
                     continue
-                word_dict[firstCol] = len(matrix)
+                word_dict[first_col] = len(matrix)
                 matrix.append(row[1:])
         embed_matrix = np.array(matrix)
         embed_matrix = embed_matrix.astype(np.float64)
