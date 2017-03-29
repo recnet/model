@@ -24,9 +24,9 @@
 from enum import Enum
 
 import re
-from definitions import DATASETS_PATH
 import os
 import csv
+from definitions import DATASETS_PATH
 
 
 class Dataenum(Enum):

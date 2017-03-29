@@ -30,11 +30,10 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-import data as data
-from networkconfig import yamlconfig as networkconfig
 from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
-from folder_builder import build_structure
-from writer import log_config
+from ..util import data as data
+from ..util.folder_builder import build_structure
+from ..util.writer import log_config
 
 
 # TODO Separera checkpoints ut ur modell klassen
@@ -365,19 +364,3 @@ class ModelBuilder(object):
         self._model.saver = tf.train.Saver()
         self._model.load_checkpoint()
         return self._model
-
-def main():
-    """ A main method that creates the model and starts training it """
-    with tf.Session() as sess:
-        fourth_config = 3
-        model_builder = ModelBuilder(networkconfig[fourth_config], sess)
-        model_four = model_builder.\
-            add_layer(400).\
-            add_output_layer().\
-            add_precision_operations().\
-            build()
-        model_four.train()
-        model_four.close_writers()
-
-if __name__ == "__main__":
-    main()

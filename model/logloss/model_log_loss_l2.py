@@ -30,11 +30,10 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-import data
-from networkconfig import yamlconfig as networkconfig
-from folder_builder import build_structure
-from writer import log_config
 from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
+from ..util import data as data
+from ..util.folder_builder import build_structure
+from ..util.writer import log_config
 
 class Model(object):
     """ A model representing our neural network """
@@ -50,6 +49,11 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
+        self.l2_factor = config['l2_factor']
+        self.use_l2_loss = config['use_l2_loss']
+        self.use_dropout = config['use_dropout']
+        self.dropout_prob = config['dropout_prob'] # Only used for train op
+
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -83,7 +87,11 @@ class Model(object):
                                       [None, self.user_count],
                                       name="target")
 
-        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
+        self._keep_prob = tf.placeholder(tf.float64, name="keep_prob")
+
+        # LSTM Layer
+        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons,
+                                             state_is_tuple=True)
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
@@ -95,11 +103,13 @@ class Model(object):
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._input)
         # Run the LSTM layer with the embedded input
-        outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
-                                       dtype=tf.float64)
+        lstm_outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
+                                            dtype=tf.float64)
 
-        outputs = tf.transpose(outputs, [1, 0, 2])
-        output = outputs[-1]
+        lstm_outputs = tf.transpose(lstm_outputs, [1, 0, 2])
+        lstm_output = lstm_outputs[-1]
+        if self.use_dropout:
+            lstm_output = tf.nn.dropout(lstm_outputs[-1], self._keep_prob)
 
 
 
@@ -117,17 +127,25 @@ class Model(object):
                                                     dtype=tf.float64),
                                    name="biases")
 
-        logits = tf.matmul(output, sigmoid_weights) + sigmoid_bias
+        logits = tf.matmul(lstm_output, sigmoid_weights) + sigmoid_bias
         self.sigmoid = tf.nn.sigmoid(logits)
 
         # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target, logits=logits)
-        #error = tf.losses.log_loss(labels=self._target,
-        #                           predictions=self.sigmoid)
+        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._target,
+                                                        logits=logits)
 
-        cross_entropy = tf.reduce_mean(error)
+        # Regularization(L2)
+        # If more layers are added these should be added as a l2_loss term in
+        # the regularization function (both weight and bias).
+        cross_entropy = None
+        if self.use_l2_loss:
+            cross_entropy = tf.reduce_mean(error \
+                + self.l2_factor * tf.nn.l2_loss(sigmoid_weights) \
+                + self.l2_factor * tf.nn.l2_loss(sigmoid_bias))
+        else:
+            cross_entropy = tf.reduce_mean(error)
+
         self.error = cross_entropy
-
         self.train_op = tf.train.AdamOptimizer(
             self.learning_rate).minimize(cross_entropy)
 
@@ -183,27 +201,24 @@ class Model(object):
 
         # Compute validation error
         val_data, val_labels = self.data.get_validation()
-        validation_summary = self._session.run(self.prec_sum_validation,
-                                               {self._input: val_data,
-                                                self._target: val_labels})
+        val_prec, val_err = self._session.run([self.prec_sum_validation,
+                                               self.error_sum],
+                                              {self._input: val_data,
+                                               self._target: val_labels,
+                                               self._keep_prob: 1.0})
 
-        self.valid_writer.add_summary(validation_summary, epoch)
-        validation_err_summary = self._session.run(self.error_sum,
-                                                   {self._input: val_data,
-                                                    self._target: val_labels})
-        self.valid_writer.add_summary(validation_err_summary, epoch)
+        self.valid_writer.add_summary(val_prec, epoch)
+        self.valid_writer.add_summary(val_err, epoch)
 
         # Compute training error
         train_data, train_labels = self.data.get_training()
-        training_summary = self._session.run(self.prec_sum_training,
-                                             {self._input: train_data,
-                                              self._target: train_labels})
-        self.train_writer.add_summary(training_summary, epoch)
-        training_err_summary = self._session.run(self.error_sum,
-                                                 {self._input: train_data,
-                                                  self._target: train_labels})
-        self.train_writer.add_summary(training_err_summary, epoch)
-        return None
+        train_prec, train_err = self._session.run([self.prec_sum_training,
+                                                   self.error_sum],
+                                                  {self._input: train_data,
+                                                   self._target: train_labels,
+                                                   self._keep_prob: 1.0})
+        self.train_writer.add_summary(train_prec, epoch)
+        self.train_writer.add_summary(train_err, epoch)
 
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
@@ -212,7 +227,8 @@ class Model(object):
 
         return self._session.run(self.error,
                                  feed_dict={self._input: data_batch,
-                                            self._target: label_batch})
+                                            self._target: label_batch,
+                                            self._keep_prob: 1.0})
 
     def train(self):
         """ Trains the model on the dataset """
@@ -228,7 +244,7 @@ class Model(object):
                                               self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
-            self.train_batch()
+            training_error = self.train_batch()
             validation_error = self.validate_batch()
 
             # error_sum += error
@@ -236,14 +252,9 @@ class Model(object):
 
             # Don't validate so often
             if i % (self.data.train_size//self.batch_size//10) == 0 and i:
-                avg_val_err = val_error_sum/i
-                avg_trn_err = error_sum/i
-                # print("Training... Epoch: {:d}, Done: {:%}" \
-                #     .format(epoch, done))
-                # print("Training error {:f} ({:f})" \
-                #       .format( error, avg_trn_err))
-                print("Validation error: {:f} ({:f}))" \
-                    .format(validation_error, avg_val_err))
+                done = self.data.percent_of_epoch
+                print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}" \
+                    .format(validation_error, training_error, done))
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
@@ -262,24 +273,15 @@ class Model(object):
             batch_input, batch_label = self.data.next_train_batch()
         self._session.run(self.train_op,
                           {self._input: batch_input,
-                           self._target: batch_label})
+                           self._target: batch_label,
+                           self._keep_prob: self.dropout_prob})
 
         # self.save_checkpoint()
         return self._session.run(self.error,
                                  feed_dict={self._input: batch_input,
-                                            self._target: batch_label})
+                                            self._target: batch_label,
+                                            self._keep_prob: 1.0})
 
     def close_writers(self):
         self.train_writer.close()
         self.valid_writer.close()
-
-def main():
-    """ A main method that creates the model and starts training it """
-    with tf.Session() as sess:
-        config = 2
-        model = Model(networkconfig[config], sess)
-        model.train()
-        model.close_writers()
-
-if __name__ == "__main__":
-    main()
