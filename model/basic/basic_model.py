@@ -30,11 +30,10 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-import data as data
-from networkconfig import yamlconfig as networkconfig
 from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
-from folder_builder import build_structure
-from writer import log_config
+from ..util import data as data
+from ..util.folder_builder import build_structure
+from ..util.writer import log_config
 
 
 # TODO Separera checkpoints ut ur modell klassen
@@ -245,22 +244,3 @@ class Model(object):
     def close_writers(self):
         self.train_writer.close()
         self.valid_writer.close()
-
-def main():
-    """ A main method that creates the model and starts training it """
-    with tf.Session() as sess:
-        first_config = 0
-        model = Model(networkconfig[first_config], sess)
-        model.train()
-        model.close_writers()
-
-    tf.reset_default_graph() #Must reset graph because tensorflow doesn't do it. Must be outside of a session and before next session.
-    with tf.Session() as sess:
-        second_config = 1
-        modelTwo = Model(networkconfig[second_config], sess)
-        modelTwo.train()
-        modelTwo.close_writers()
-
-
-if __name__ == "__main__":
-    main()

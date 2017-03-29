@@ -24,10 +24,10 @@
 from enum import Enum
 
 import re
-from definitions import DATASETS_PATH
 import os
 import csv
 import numpy as np
+from definitions import DATASETS_PATH
 
 
 class Dataenum(Enum):
@@ -73,7 +73,6 @@ class CsvReader:
         file_path = os.path.join(DATASETS_PATH, fileName)
         with open(file_path, 'r', encoding='UTF-8') as csvfile:
             reader = csv.reader(csvfile, delimiter=' ', quoting=csv.QUOTE_NONE)
-            print('tjena')
             word_dict = dict()
             matrix = []
 
@@ -82,10 +81,6 @@ class CsvReader:
 
             for row in reader:
                 firstCol = row[0]
-                # if firstCol == '<unknown>': removing this because other dataset doesnt have unknown tag at all
-                #     # matrix.append(row[1:])
-                #     result['UNK'] = len(matrix)
-                #     matrix.append(np.random.uniform(0, 1, size=dimension_size))
 
                 if firstCol in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
                     continue
@@ -94,9 +89,9 @@ class CsvReader:
                     continue
                 word_dict[firstCol] = len(matrix)
                 matrix.append(row[1:])
-        res = np.array(matrix)
-        res = res.astype(np.float64)
-        return word_dict, res
+        embed_matrix = np.array(matrix)
+        embed_matrix = embed_matrix.astype(np.float64)
+        return word_dict, embed_matrix
 
 
 
