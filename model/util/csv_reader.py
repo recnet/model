@@ -58,7 +58,7 @@ class CsvReader:
                     col = re.sub('\d+', 'NUMTOKEN', col)
                     col = re.sub('\s+NUMTOKEN\s+', ' NUMTOKEN ', col)
 
-                    for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%']:
+                    for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
                         col = str(col)
                         col = col.replace(character, '')
                     if col:
