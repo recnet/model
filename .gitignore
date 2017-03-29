@@ -1,6 +1,8 @@
 checkpoints/
 logs/
 
+config.yaml
+
 
 # Created by https://www.gitignore.io/api/windows,macos,visualstudiocode,sublimetext,linux,intellij
 
