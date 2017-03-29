@@ -167,8 +167,6 @@ class Model(object):
             cross_entropy = tf.reduce_mean(error)
 
         self.error = cross_entropy
-        self.train_op = tf.train.AdamOptimizer(
-            self.learning_rate).minimize(cross_entropy)
 
         # Cast a tensor to booleans, where top k are True, else False
         top_k_to_bool = lambda x: tf.greater_equal(
@@ -305,3 +303,8 @@ class Model(object):
         """ Closes tensorboard writers """
         self.train_writer.close()
         self.valid_writer.close()
+
+
+class TrainInterface(object):
+    def train_batch(self, batch_input, batch_label):
+        raise NotImplementedError

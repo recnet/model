@@ -29,6 +29,7 @@ import logging
 from . import helper
 from .csv_reader import CsvReader, Dataenum
 
+
 class Data(object):
     def __init__(self, networkconfig):
         self.netcfg = networkconfig
@@ -188,4 +189,3 @@ class Data(object):
         self._current_train_index = old_ind
         self.completed_training_epochs = old_epoch
         return batch_x, batch_y
-
