@@ -31,7 +31,6 @@ import glob
 import os.path
 import tensorflow as tf
 from ..util import data as data
-from ..util.networkconfig import yamlconfig as networkconfig
 from ..util.folder_builder import build_structure
 from ..util.writer import log_config
 from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
