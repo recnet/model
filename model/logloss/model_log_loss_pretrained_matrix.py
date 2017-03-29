@@ -50,6 +50,7 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
+        self.isTrainableMatrix = config['trainable_matrix']
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -88,10 +89,14 @@ class Model(object):
                                       name="target")
 
         lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
-
-        embedding_matrix = tf.Variable(
-            tf.constant(0.0, shape=[self.vocabulary_size, self.config['dimensions']], dtype=tf.float64),
-            trainable=False, name="embedding_matrix", dtype=tf.float64)
+        if self.isTrainableMatrix == 'Yes':
+            embedding_matrix = tf.Variable(
+                tf.constant(0.0, shape=[self.vocabulary_size, self.config['dimensions']], dtype=tf.float64),
+                trainable=True, name="embedding_matrix", dtype=tf.float64)
+        else:
+            embedding_matrix = tf.Variable(
+                tf.constant(0.0, shape=[self.vocabulary_size, self.config['dimensions']], dtype=tf.float64),
+                trainable=False, name="embedding_matrix", dtype=tf.float64)
 
         self.embedding_placeholder = tf.placeholder(tf.float64, [self.vocabulary_size, self.config['dimensions']])
         self.embedding_init = embedding_matrix.assign(self.embedding_placeholder)
