@@ -66,7 +66,6 @@ class Model(object):
         log_config(config)  # Discuss if we should do this after, and somehow take "highest" precision from validation?
         self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN)
         self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
-
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
             if 'usePretrained' in self.config:
@@ -252,6 +251,7 @@ class Model(object):
                 #     .format(epoch, done))
                 # print("Training error {:f} ({:f})" \
                 #       .format( error, avg_trn_err))
+
                 # print("Validation error: {:f} ({:f}))" \
                 #     .format(validation_error, avg_val_err))
 
