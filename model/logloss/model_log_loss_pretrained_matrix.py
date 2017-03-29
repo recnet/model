@@ -278,21 +278,3 @@ class Model(object):
     def close_writers(self):
         self.train_writer.close()
         self.valid_writer.close()
-
-def main():
-    """ A main method that creates the model and starts training it """
-    with tf.Session() as sess:
-        config = 5
-        model = Model(networkconfig[config], sess)
-        model.train()
-        model.close_writers()
-
-    tf.reset_default_graph()
-    with tf.Session() as sess:
-        config = 7
-        model = Model(networkconfig[config], sess)
-        model.train()
-        model.close_writers()
-
-if __name__ == "__main__":
-    main()
