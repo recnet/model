@@ -30,10 +30,10 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
+from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
 from ..util import data as data
 from ..util.folder_builder import build_structure
 from ..util.writer import log_config
-from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
 
 class Model(object):
     """ A model representing our neural network """
@@ -50,7 +50,8 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
-        self.isTrainableMatrix = config['trainable_matrix']
+        self.is_trainable_matrix = config['trainable_matrix']
+
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -74,7 +75,9 @@ class Model(object):
                 self.vocabulary_size = len(self.data.embedding_matrix)
         self.build_graph()
         self.load_checkpoint()
-        self._session.run(self.embedding_init, feed_dict={self.embedding_placeholder: self.data.embedding_matrix})
+        self._session.run(self.embedding_init,
+                          feed_dict={self.embedding_placeholder:
+                                     self.data.embedding_matrix})
 
     def build_graph(self):
         """ Builds the computational graph """
@@ -89,17 +92,30 @@ class Model(object):
                                       name="target")
 
         lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
-        if self.isTrainableMatrix == 'Yes':
+        if self.is_trainable_matrix:
             embedding_matrix = tf.Variable(
-                tf.constant(0.0, shape=[self.vocabulary_size, self.config['dimensions']], dtype=tf.float64),
-                trainable=True, name="embedding_matrix", dtype=tf.float64)
+                tf.constant(0.0,
+                            shape=[self.vocabulary_size,
+                                   self.config['dimensions']],
+                            dtype=tf.float64),
+                trainable=True,
+                name="embedding_matrix",
+                dtype=tf.float64)
         else:
             embedding_matrix = tf.Variable(
-                tf.constant(0.0, shape=[self.vocabulary_size, self.config['dimensions']], dtype=tf.float64),
-                trainable=False, name="embedding_matrix", dtype=tf.float64)
+                tf.constant(0.0,
+                            shape=[self.vocabulary_size,
+                                   self.config['dimensions']],
+                            dtype=tf.float64),
+                trainable=False,
+                name="embedding_matrix",
+                dtype=tf.float64)
 
-        self.embedding_placeholder = tf.placeholder(tf.float64, [self.vocabulary_size, self.config['dimensions']])
-        self.embedding_init = embedding_matrix.assign(self.embedding_placeholder)
+        self.embedding_placeholder = \
+            tf.placeholder(tf.float64,
+                           [self.vocabulary_size, self.config['dimensions']])
+        self.embedding_init = \
+            embedding_matrix.assign(self.embedding_placeholder)
 
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._input)
@@ -222,8 +238,6 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-        error_sum = 0
-        val_error_sum = 0
         old_epoch = 0
         # Do initial validation if first time running
         if self.epoch.eval(self._session) == 0:
@@ -233,7 +247,7 @@ class Model(object):
                                               self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
-            self.train_batch()
+            training_error = self.train_batch()
             validation_error = self.validate_batch()
 
             # error_sum += error
@@ -241,30 +255,20 @@ class Model(object):
 
             # Don't validate so often
             if i % (self.data.train_size//self.batch_size//10) == 0 and i:
-                avg_val_err = val_error_sum/i
-                avg_trn_err = error_sum/i
-                # print("Training... Epoch: {:d}, Done: {:%}" \
-                #     .format(epoch, done))
-                # print("Training error {:f} ({:f})" \
-                #       .format( error, avg_trn_err))
-
-                # print("Validation error: {:f} ({:f}))" \
-                #     .format(validation_error, avg_val_err))
+                done = self.data.percent_of_epoch
+                print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}" \
+                    .format(validation_error, training_error, done))
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
                 self._session.run(self.epoch.assign_add(1))
-                # print("Epoch complete...old ", old_epoch)
-                # self.save_checkpoint()
+                print("Epoch complete...old ", old_epoch)
+                self.save_checkpoint()
                 self.validate()
             old_epoch = epoch
 
         # Save model when done training
-        # self.save_checkpoint()
-        trainPres, trainAbs, validPres, validAbs = self.data.get_stats()
-        print("STATISTICS ", trainPres, trainAbs, validPres, validAbs)
-        print("Percentage present in train ", (trainPres)/(trainPres + trainAbs))
-        print("Percentage present in valid ", (validPres)/(validPres + validAbs))
+        self.save_checkpoint()
 
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """

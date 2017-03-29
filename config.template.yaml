@@ -17,7 +17,7 @@ network:
     l2_factor: 0.01
     use_dropout: false
     dropout_prob: 0.75
-    trainable_matrix: 'Yes'
+    trainable_matrix: true
     dimensions: 50
     preTrainedFile: 'glove.6B.50d.txt'
     usePretrained: 'Sure'
