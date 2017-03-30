@@ -34,6 +34,7 @@ from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
 from ..util import data as data
 from ..util.folder_builder import build_structure
 from ..util.writer import log_config
+from ..util.writer import log_samefile
 
 class Model(object):
     """ A model representing our neural network """
@@ -288,3 +289,4 @@ class Model(object):
     def close_writers(self):
         self.train_writer.close()
         self.valid_writer.close()
+        log_samefile(self.config, 0, 0, 0, 0, 0, 0)

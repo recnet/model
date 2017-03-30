@@ -31,4 +31,5 @@ LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 TENSOR_DIR_TRAIN = 'tensorDir/train'
 TENSOR_DIR_VALID = 'tensorDir/valid'
 CHECKPOINTS_DIR = 'checkpoints'
+LOGGING_RESULTS_FILE = os.path.join(LOGS_DIR, 'logs_results_all.csv')
 
