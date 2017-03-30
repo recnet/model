@@ -44,7 +44,7 @@ class Model(object):
         self.latest_layer = None
         self.output_weights = None
         self.output_bias = None
-        self.l2_term = 0
+        self.l2_term = tf.constant(0, dtype=tf.float64)
 
         self.vocabulary_size = config['vocabulary_size']
         self.user_count = config['user_count']
@@ -77,8 +77,7 @@ class Model(object):
         self.logging_dir = build_structure(config)
         self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
         log_config(config) #Discuss if we should do this after, and somehow take "highest" precision from validation?
-        self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN)
-        self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
+
 
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
@@ -141,6 +140,10 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
+
+        self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN, self._session.graph)
+        self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
+
         error_sum = 0
         val_error_sum = 0
         old_epoch = 0

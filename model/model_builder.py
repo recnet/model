@@ -95,14 +95,16 @@ class ModelBuilder(object):
                                                  dtype=tf.float64),
                                 name="biases" + str(self.number_of_layers))
 
-        logits = tf.matmul(self._model.latest_layer, weights) + bias
-        self._model.latest_layer = tf.nn.relu(logits)
+        logits = tf.add(tf.matmul(self._model.latest_layer, weights), bias)
+        self._model.latest_layer = tf.nn.relu(logits, name="hidden_layer-" + str(self.number_of_layers))
 
         if self._model.use_l2_loss:
-            self._model.l2_term += tf.nn.l2_loss(weights) + tf.nn.l2_loss(bias)
+            self._model.l2_term = tf.add(tf.add(self._model.l2_term, tf.nn.l2_loss(weights)), tf.nn.l2_loss(bias))
         if self._model.use_dropout:
             self._model.latest_layer = tf.nn.dropout(self._model.latest_layer,
-                                                    self._model.dropout_prob)
+                                                    self._model.dropout_prob,
+                                                    name="hidden_layer" + str(self.number_of_layers) + "dropout")
+
         return self
 
     def add_output_layer(self):
@@ -122,7 +124,7 @@ class ModelBuilder(object):
                                                     dtype=tf.float64),
                                    name="biases")
 
-        logits = tf.matmul(self._model.latest_layer, sigmoid_weights) + sigmoid_bias
+        logits = tf.add(tf.matmul(self._model.latest_layer, sigmoid_weights), sigmoid_bias)
         self._model.sigmoid = tf.nn.sigmoid(logits)
 
         # Training
@@ -132,10 +134,10 @@ class ModelBuilder(object):
                                                         logits=logits)
 
         if self._model.use_l2_loss:
-            cross_entropy = tf.reduce_mean(error
-                                           + self._model.l2_factor * tf.nn.l2_loss(sigmoid_weights)
-                                           + self._model.l2_factor * tf.nn.l2_loss(sigmoid_bias)
-                                           + self._model.l2_factor * self._model.l2_term)
+            cross_entropy = tf.reduce_mean(tf.add(tf.add(error
+                                           , tf.multiply(self._model.l2_factor, tf.nn.l2_loss(sigmoid_weights)))
+                                           , tf.add(tf.multiply(self._model.l2_factor, tf.nn.l2_loss(sigmoid_bias))
+                                           , tf.multiply(self._model.l2_factor, self._model.l2_term))))
         else:
             cross_entropy = tf.reduce_mean(error)
 

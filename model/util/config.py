@@ -22,6 +22,13 @@
 # SOFTWARE.
 # ==============================================================================
 import yaml
+import numpy as np
 
 with open("./config.yaml", 'r') as ymlfile:
     cfg = yaml.load(ymlfile)
+    for conf in cfg['network']:
+        for (key, value) in conf.items():
+            if type(value) is float:
+                conf[key] = np.float64(value)
+
+
