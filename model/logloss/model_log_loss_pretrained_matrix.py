@@ -51,6 +51,9 @@ class Model(object):
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
         self.is_trainable_matrix = config['trainable_matrix']
+        self.use_constant_limit = config['use_constant_limit']
+        self.constant_prediction_limit = config['constant_prediction_limit']
+        self.pre_trained_dimension = config['pre_trained_dimension']
 
         # Will be set in build_graph
         self._input = None
@@ -96,7 +99,7 @@ class Model(object):
             embedding_matrix = tf.Variable(
                 tf.constant(0.0,
                             shape=[self.vocabulary_size,
-                                   self.config['dimensions']],
+                                   self.pre_trained_dimension],
                             dtype=tf.float64),
                 trainable=True,
                 name="embedding_matrix",
@@ -105,7 +108,7 @@ class Model(object):
             embedding_matrix = tf.Variable(
                 tf.constant(0.0,
                             shape=[self.vocabulary_size,
-                                   self.config['dimensions']],
+                                   self.pre_trained_dimension],
                             dtype=tf.float64),
                 trainable=False,
                 name="embedding_matrix",
@@ -113,7 +116,7 @@ class Model(object):
 
         self.embedding_placeholder = \
             tf.placeholder(tf.float64,
-                           [self.vocabulary_size, self.config['dimensions']])
+                           [self.vocabulary_size, self.pre_trained_dimension])
         self.embedding_init = \
             embedding_matrix.assign(self.embedding_placeholder)
 
@@ -152,13 +155,21 @@ class Model(object):
         self.train_op = tf.train.AdamOptimizer(
             self.learning_rate).minimize(cross_entropy)
 
-        # Cast a tensor to booleans, where top k are True, else False
-        top_k_to_bool = lambda x: tf.greater_equal(
-            x, tf.reduce_min(
-                tf.nn.top_k(x, k=self.users_to_select)[0]))
+        # Determine which prediction function to use. Casts a tensor to
+        # booleans.
+        if self.use_constant_limit:
+            # x above limit are True, else False
+            prediction_func = lambda x: tf.greater_equal(
+                x, self.constant_prediction_limit)
+        else:
+            # x above mean are True, else False
+            prediction_func = lambda x: tf.greater_equal(
+                x, tf.reduce_mean(x))
 
         # Convert all probibalistic predictions to discrete predictions
-        self.predictions = tf.map_fn(top_k_to_bool, self.sigmoid, dtype=tf.bool)
+        self.predictions = tf.map_fn(prediction_func, self.sigmoid, dtype=tf.bool)
+
+        # Calculate precision
         # Need to create two different precisions, because they have
         # internal memory of old values
         self.precision_validation = tf.metrics.precision(self._target,

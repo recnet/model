@@ -32,7 +32,7 @@ def get_model(model_type, config_file, session):
     elif model_type == "logloss/regularised/1-hidden":
         from model.logloss.model_log_loss_l2_hid1 import Model
         return Model(config_file, session)
-    elif model_type == 'loggloss/pretrained-matrix':
+    elif model_type == 'logloss/pretrained-matrix':
         from model.logloss.model_log_loss_pretrained_matrix import Model
         return Model(config_file, session)
     else:

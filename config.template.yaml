@@ -10,6 +10,7 @@ network:
     embedding_size: 100
     max_title_length: 30
     lstm_neurons: 200
+    hidden_neurons: 300
     batch_size: 25
     training_epochs: 5
     users_to_select: 1
@@ -17,6 +18,8 @@ network:
     l2_factor: 0.01
     use_dropout: false
     dropout_prob: 0.75
+    use_constant_limit: false
+    constant_prediction_limit: 0.3
     trainable_matrix: true
     pre_trained_dimension: 50
     pre_trained_matrix: 'glove.6B.50d.txt'

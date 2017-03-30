@@ -53,6 +53,8 @@ class Model(object):
         self.use_l2_loss = config['use_l2_loss']
         self.use_dropout = config['use_dropout']
         self.dropout_prob = config['dropout_prob'] # Only used for train op
+        self.use_constant_limit = config['use_constant_limit']
+        self.constant_prediction_limit = config['constant_prediction_limit']
 
         # Will be set in build_graph
         self._input = None
@@ -149,12 +151,19 @@ class Model(object):
         self.train_op = tf.train.AdamOptimizer(
             self.learning_rate).minimize(cross_entropy)
 
-        # Cast a tensor to booleans, x above mean are True, else False
-        greater_than_avg = lambda x: tf.greater_equal(
-            x, tf.reduce_mean(x))
+        # Determine which prediction function to use. Casts a tensor to
+        # booleans.
+        if self.use_constant_limit:
+            # x above limit are True, else False
+            prediction_func = lambda x: tf.greater_equal(
+                x, self.constant_prediction_limit)
+        else:
+            # x above mean are True, else False
+            prediction_func = lambda x: tf.greater_equal(
+                x, tf.reduce_mean(x))
 
         # Convert all probibalistic predictions to discrete predictions
-        self.predictions = tf.map_fn(greater_than_avg, self.sigmoid, dtype=tf.bool)
+        self.predictions = tf.map_fn(prediction_func, self.sigmoid, dtype=tf.bool)
 
         # Calculate precision
         # Need to create two different precisions, because they have
