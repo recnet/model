@@ -95,24 +95,14 @@ class Model(object):
                                       name="target")
 
         lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
-        if self.is_trainable_matrix:
-            embedding_matrix = tf.Variable(
-                tf.constant(0.0,
-                            shape=[self.vocabulary_size,
-                                   self.pre_trained_dimension],
-                            dtype=tf.float64),
-                trainable=True,
-                name="embedding_matrix",
-                dtype=tf.float64)
-        else:
-            embedding_matrix = tf.Variable(
-                tf.constant(0.0,
-                            shape=[self.vocabulary_size,
-                                   self.pre_trained_dimension],
-                            dtype=tf.float64),
-                trainable=False,
-                name="embedding_matrix",
-                dtype=tf.float64)
+        embedding_matrix = tf.Variable(
+            tf.constant(0.0,
+                        shape=[self.vocabulary_size,
+                               self.pre_trained_dimension],
+                        dtype=tf.float64),
+            trainable=self.is_trainable_matrix,
+            name="embedding_matrix",
+            dtype=tf.float64)
 
         self.embedding_placeholder = \
             tf.placeholder(tf.float64,
