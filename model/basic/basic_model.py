@@ -55,27 +55,13 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
+        self.use_l2_loss = config['use_l2_loss']
+        self.l2_factor = config['l2_factor']
+        self.use_dropout = config['use_dropout']
+        self.dropout_prob = config['dropout_prob'] # Only used for train op
+        self.hidden_layers = config['hidden_layers']
+        self.hidden_neurons = config['hidden_neurons']
 
-        if 'use_l2_loss' in config:
-            self.use_l2_loss = config['use_l2_loss']
-        else:
-            self.use_l2_loss = False
-
-        if 'l2_factor' in config:
-            self.l2_factor = config['l2_factor']
-        else:
-            print("I: No l2 factor found, l2 regularisation have been turned off")
-            self.use_l2_loss = False
-
-        if 'use_dropout' in config:
-            self.use_dropout = config['use_dropout']
-        else:
-            self.use_dropout = False
-
-        if 'dropout_prob' in config:
-            self.dropout_prob = config['dropout_prob'] # Only used for train op
-        else:
-            print("I: No dropout probability found, dropout have been turn off")
 
         # Will be set in build_graph
         self._input = None
@@ -97,39 +83,6 @@ class Model(object):
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
 
-    def build_graph(self):
-        """ Builds the computational graph """
-        self.epoch = tf.Variable(0, dtype=tf.int32, name="train_epoch")
-
-        self._input = tf.placeholder(tf.int32,
-                                     [None, self.max_title_length],
-                                     name="input")
-
-        self._target = tf.placeholder(tf.float64,
-                                      [None, self.user_count],
-                                      name="target")
-
-        self._keep_prob = tf.placeholder(tf.float64, name="keep_prob")
-
-        lstm_layer = tf.contrib.rnn.LSTMCell(self.lstm_neurons, state_is_tuple=True)
-
-        # Embedding matrix for the words
-        embedding_matrix = tf.Variable(
-            tf.random_uniform(
-                [self.vocabulary_size, self.embedding_size],
-                - 1.0, 1.0, dtype=tf.float64),
-            name="embeddings")
-
-        embedded_input = tf.nn.embedding_lookup(embedding_matrix,
-                                                self._input)
-        # Run the LSTM layer with the embedded input
-        outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
-                                       dtype=tf.float64)
-
-        outputs = tf.transpose(outputs, [1, 0, 2])
-        output = outputs[-1]
-
-        self.latest_layer = output
 
     def load_checkpoint(self):
         """ Loads any exisiting trained model """
@@ -249,9 +202,42 @@ class ModelBuilder(object):
 
     def __init__(self, config, session):
         self._model = Model(config, session)
-        self._model.build_graph()
         self.added_layers = False
         self.number_of_layers = 0
+
+    def add_input_layer(self):
+        """Adds a input layer to the graph, no other layers can be added before this has been added"""
+        self._model.epoch = tf.Variable(0, dtype=tf.int32, name="train_epoch")
+
+        self._model._input = tf.placeholder(tf.int32,
+                                     [None, self._model.max_title_length],
+                                     name="input")
+
+        self._model._target = tf.placeholder(tf.float64,
+                                      [None, self._model.user_count],
+                                      name="target")
+
+        self._model._keep_prob = tf.placeholder(tf.float64, name="keep_prob")
+
+        lstm_layer = tf.contrib.rnn.LSTMCell(self._model.lstm_neurons, state_is_tuple=True)
+
+        # Embedding matrix for the words
+        embedding_matrix = tf.Variable(
+            tf.random_uniform(
+                [self._model.vocabulary_size, self._model.embedding_size],
+                - 1.0, 1.0, dtype=tf.float64),
+            name="embeddings")
+
+        embedded_input = tf.nn.embedding_lookup(embedding_matrix,
+                                                self._model._input)
+        # Run the LSTM layer with the embedded input
+        outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
+                                       dtype=tf.float64)
+
+        outputs = tf.transpose(outputs, [1, 0, 2])
+        output = outputs[-1]
+
+        self._model.latest_layer = output
 
     def add_layer(self, number_of_neurons):
         """Adds a layer between latest added layer and the output layer"""
@@ -359,6 +345,16 @@ class ModelBuilder(object):
 
     def build(self):
         """Adds saver and init operation and returns the model"""
+        self.add_input_layer()
+
+        # Add a number of hidden layers
+        for i in range(self._model.hidden_layers):
+            self.add_layer(self._model.hidden_neurons)
+
+        self.add_output_layer()
+
+        self.add_precision_operations()
+
         self._model._init_op = tf.group(tf.global_variables_initializer(),
                                         tf.local_variables_initializer())
         self._model.saver = tf.train.Saver()
