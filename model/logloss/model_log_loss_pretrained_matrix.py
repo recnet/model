@@ -53,6 +53,7 @@ class Model(object):
         self.is_trainable_matrix = config['trainable_matrix']
         self.use_constant_limit = config['use_constant_limit']
         self.constant_prediction_limit = config['constant_prediction_limit']
+        self.use_pretrained = config['use_pretrained']
         self.pre_trained_dimension = config['pre_trained_dimension']
 
         # Will be set in build_graph
@@ -74,7 +75,7 @@ class Model(object):
         self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
-            if 'usePretrained' in self.config:
+            if self.use_pretrained:
                 self.vocabulary_size = len(self.data.embedding_matrix)
         self.build_graph()
         self.load_checkpoint()

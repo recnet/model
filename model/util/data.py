@@ -75,7 +75,7 @@ class Data(object):
     def _build_dict(self):
         """ Builds dictionaries using given data """
         logging.debug("Building dictionaries...")
-        if self.use_pretrained:
+        if not self.use_pretrained:
             vocab = " ".join(self.train_data).split()
             _, _, self.word_dict, self.rev_dict = \
                 helper.build_dataset(vocab, vocabulary_size=self.vocabulary_size)
