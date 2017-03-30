@@ -26,6 +26,7 @@ from enum import Enum
 import re
 import os
 import csv
+import numpy as np
 from definitions import DATASETS_PATH
 
 
@@ -57,7 +58,7 @@ class CsvReader:
                     col = re.sub('\d+', 'NUMTOKEN', col)
                     col = re.sub('\s+NUMTOKEN\s+', ' NUMTOKEN ', col)
 
-                    for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%']:
+                    for character in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
                         col = str(col)
                         col = col.replace(character, '')
                     if col:
@@ -66,3 +67,34 @@ class CsvReader:
                 data_full.append(data.strip(' ').strip(','))
                 label_full.append(label)
             return data_full, label_full
+
+
+    def test_load_pretrained_embeddings(self, fileName, dimension_size=50):
+        file_path = os.path.join(DATASETS_PATH, fileName)
+        with open(file_path, 'r', encoding='UTF-8') as csvfile:
+            reader = csv.reader(csvfile, delimiter=' ', quoting=csv.QUOTE_NONE)
+            word_dict = dict()
+            matrix = []
+
+            word_dict['UNK'] = len(matrix)
+            matrix.append(np.random.rand(1, dimension_size)[0].tolist())
+
+            for row in reader:
+                first_col = row[0]
+
+                if first_col in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
+                    continue
+
+                if first_col[0] == '<': #some words are tokens for usernames like <user> or <caps> etc, ignore them.
+                    continue
+                word_dict[first_col] = len(matrix)
+                matrix.append(row[1:])
+        embed_matrix = np.array(matrix)
+        embed_matrix = embed_matrix.astype(np.float64)
+        return word_dict, embed_matrix
+
+
+
+
+
+

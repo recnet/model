@@ -49,6 +49,8 @@ class Model(object):
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
         self.users_to_select = config['users_to_select']
+        self.use_constant_limit = config['use_constant_limit']
+        self.constant_prediction_limit = config['constant_prediction_limit']
         # Will be set in build_graph
         self._input = None
         self._target = None
@@ -130,19 +132,40 @@ class Model(object):
         self.train_op = tf.train.AdamOptimizer(
             self.learning_rate).minimize(cross_entropy)
 
-        # Cast a tensor to booleans, where top k are True, else False
-        top_k_to_bool = lambda x: tf.greater_equal(
-            x, tf.reduce_min(
-                tf.nn.top_k(x, k=self.users_to_select)[0]))
+        # Determine which prediction function to use. Casts a tensor to
+        # booleans.
+        if self.use_constant_limit:
+            # x above limit are True, else False
+            prediction_func = lambda x: tf.greater_equal(
+                x, self.constant_prediction_limit)
+        else:
+            # x above mean are True, else False
+            prediction_func = lambda x: tf.greater_equal(
+                x, tf.reduce_mean(x))
 
         # Convert all probibalistic predictions to discrete predictions
-        self.predictions = tf.map_fn(top_k_to_bool, self.sigmoid, dtype=tf.bool)
+        self.predictions = tf.map_fn(prediction_func, self.sigmoid, dtype=tf.bool)
+
+        # Calculate precision
         # Need to create two different precisions, because they have
         # internal memory of old values
-        self.precision_validation = tf.metrics.precision(self._target,
-                                                         self.predictions)
-        self.precision_training = tf.metrics.precision(self._target,
-                                                       self.predictions)
+        _, self.precision_validation = tf.metrics.precision(self._target,
+                                                            self.predictions)
+        _, self.precision_training = tf.metrics.precision(self._target,
+                                                          self.predictions)
+        # Calculate recall
+        _, self.recall_validation = tf.metrics.recall(self._target,
+                                                      self.predictions)
+        _, self.recall_training = tf.metrics.recall(self._target,
+                                                    self.predictions)
+
+        # Calculate F1-score: 2 * (prec * recall) / (prec + recall)
+        self.f1_score_validation = tf.multiply(2.0, tf.truediv( \
+            tf.multiply(self.precision_validation, self.recall_validation), \
+            tf.add(self.precision_validation, self.recall_validation)))
+        self.f1_score_training = tf.multiply(2.0, tf.truediv( \
+            tf.multiply(self.precision_training, self.recall_training), \
+            tf.add(self.precision_training, self.recall_training)))
 
         # Last step
         self._init_op = tf.group(tf.global_variables_initializer(),
@@ -153,9 +176,19 @@ class Model(object):
         # Need to create two different, because they have internal memory
         # of old values
         self.prec_sum_validation = \
-            tf.summary.scalar('precision', self.precision_validation[1])
+            tf.summary.scalar('precision_validation', self.precision_validation)
         self.prec_sum_training = \
-            tf.summary.scalar('precision', self.precision_training[1])
+            tf.summary.scalar('precision_training', self.precision_training)
+
+        self.recall_sum_validation = \
+            tf.summary.scalar('recall_validation', self.recall_validation)
+        self.recall_sum_training = \
+            tf.summary.scalar('recall_training', self.recall_training)
+
+        self.f1_sum_validation = \
+            tf.summary.scalar('f1_score_validation', self.f1_score_validation)
+        self.f1_sum_training = \
+            tf.summary.scalar('f1_score_training', self.f1_score_training)
 
         self.saver = tf.train.Saver()
 
@@ -182,22 +215,34 @@ class Model(object):
 
         # Compute validation error
         val_data, val_labels = self.data.get_validation()
-        val_prec, val_err = self._session.run([self.prec_sum_validation,
-                                               self.error_sum],
-                                              {self._input: val_data,
-                                               self._target: val_labels})
+        val_prec, val_err, val_recall, val_f1 = \
+                    self._session.run([self.prec_sum_validation,
+                                       self.error_sum,
+                                       self.recall_sum_validation,
+                                       self.f1_sum_validation],
+                                      {self._input: val_data,
+                                       self._target: val_labels})
 
+        # Write results to TensorBoard
         self.valid_writer.add_summary(val_prec, epoch)
         self.valid_writer.add_summary(val_err, epoch)
+        self.valid_writer.add_summary(val_recall, epoch)
+        self.valid_writer.add_summary(val_f1, epoch)
 
         # Compute training error
         train_data, train_labels = self.data.get_training()
-        train_prec, train_err = self._session.run([self.prec_sum_training,
-                                                   self.error_sum],
-                                                  {self._input: train_data,
-                                                   self._target: train_labels})
+        train_prec, train_err, train_recall, train_f1 = \
+                    self._session.run([self.prec_sum_training,
+                                       self.error_sum,
+                                       self.recall_sum_training,
+                                       self.f1_sum_training],
+                                      {self._input: train_data,
+                                       self._target: train_labels})
+        # Write results to Tensorboard
         self.train_writer.add_summary(train_prec, epoch)
         self.train_writer.add_summary(train_err, epoch)
+        self.train_writer.add_summary(train_recall, epoch)
+        self.train_writer.add_summary(train_f1, epoch)
 
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
@@ -211,8 +256,6 @@ class Model(object):
     def train(self):
         """ Trains the model on the dataset """
         print("Starting training...")
-        error_sum = 0
-        val_error_sum = 0
         old_epoch = 0
         # Do initial validation if first time running
         if self.epoch.eval(self._session) == 0:
@@ -222,7 +265,7 @@ class Model(object):
                                               self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
-            self.train_batch()
+            training_error = self.train_batch()
             validation_error = self.validate_batch()
 
             # error_sum += error
@@ -230,14 +273,9 @@ class Model(object):
 
             # Don't validate so often
             if i % (self.data.train_size//self.batch_size//10) == 0 and i:
-                avg_val_err = val_error_sum/i
-                avg_trn_err = error_sum/i
-                # print("Training... Epoch: {:d}, Done: {:%}" \
-                #     .format(epoch, done))
-                # print("Training error {:f} ({:f})" \
-                #       .format( error, avg_trn_err))
-                print("Validation error: {:f} ({:f}))" \
-                    .format(validation_error, avg_val_err))
+                done = self.data.percent_of_epoch
+                print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}" \
+                    .format(validation_error, training_error, done))
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:

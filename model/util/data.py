@@ -41,8 +41,19 @@ class Data(object):
         self.user_count = networkconfig['users_to_select']
         self.batch_size = self.netcfg['batch_size']
         self.reader = CsvReader(networkconfig)
+        self.use_pretrained = self.netcfg['use_pretrained']
+        self.pre_trained_dimension = self.netcfg['pre_trained_dimension']
+        self.pre_trained_matrix = self.netcfg['pre_trained_matrix']
+        self.vocabulary_size = self.netcfg['vocabulary_size']
+        self.user_count = self.netcfg['user_count']
+        self.max_title_length = self.netcfg['max_title_length']
         self._read_data()
+        self.embedding_matrix = None
         self._build_dict()
+        self.train_absent = 0
+        self.train_present = 0
+        self.valid_absent = 0
+        self.valid_present = 0
 
     def _read_data(self):
         """ Reads all the data from specified path """
@@ -64,20 +75,21 @@ class Data(object):
     def _build_dict(self):
         """ Builds dictionaries using given data """
         logging.debug("Building dictionaries...")
-
-        vocab = " ".join(self.train_data).split()
+        if not self.use_pretrained:
+            vocab = " ".join(self.train_data).split()
+            _, _, self.word_dict, self.rev_dict = \
+                helper.build_dataset(vocab, vocabulary_size=self.vocabulary_size)
+        else:
+            self.word_dict, self.embedding_matrix = \
+                self.reader.test_load_pretrained_embeddings(
+                    self.pre_trained_matrix,
+                    self.pre_trained_dimension)
         users = " ".join(self.train_labels).split()
-
-        _, _, self.word_dict, self.rev_dict = \
-            helper.build_dataset(vocab, vocabulary_size=self.netcfg['vocabulary_size'])
         _, _, self.users_dict, self.rev_users_dict = \
-            helper.build_dataset(users, vocabulary_size=self.netcfg['user_count'])
-        # print(self.users_dict)
-
-        # TODO Next train batch är i princip identisk med
-        # next_valid_batch
+            helper.build_dataset(users, vocabulary_size=self.user_count)
 
     def next_train_batch(self, batch_size=None):
+        """ Get the next batch of training data """
         batch_size = batch_size or self.batch_size
         batch_x = []
         batch_y = []
@@ -93,12 +105,14 @@ class Data(object):
             # TODO Detta ska inte ligga i funktionen som generar ny data
 
             # Turn sentences and labels into vector representations
-            sentence_vec = helper.get_indicies(sentence,
-                                               self.word_dict,
-                                               self.netcfg['max_title_length'])
-
+            sentence_vec, present, absent = \
+                helper.get_indicies(sentence,
+                                    self.word_dict,
+                                    self.max_title_length)
+            self.train_present += present
+            self.train_absent += absent
             label_vec = helper.label_vector(label.split(), self.users_dict,
-                                            self.netcfg['user_count'])
+                                            self.user_count)
             batch_x.append(sentence_vec)
             batch_y.append(label_vec)
 
@@ -114,8 +128,8 @@ class Data(object):
         return batch_x, batch_y
 
     def next_valid_batch(self, batch_size=None):
-        batch_size = batch_size or self.batch_size
         """ Get the next batch of validation data """
+        batch_size = batch_size or self.batch_size
         batch_x = []
         batch_y = []
         for _ in range(0, batch_size):
@@ -129,12 +143,15 @@ class Data(object):
                 self._current_valid_index = 0
 
             # Turn sentences and labels into vectors
-            sentence_vec = helper.get_indicies(sentence,
-                                               self.word_dict,
-                                               self.netcfg['max_title_length'])
+            sentence_vec, pres, absent = \
+                helper.get_indicies(sentence,
+                                    self.word_dict,
+                                    self.max_title_length)
 
+            self.valid_present += pres
+            self.valid_absent += absent
             label_vec = helper.label_vector(label.split(), self.users_dict,
-                                            self.netcfg['user_count'])
+                                            self.user_count)
             batch_x.append(sentence_vec)
             batch_y.append(label_vec)
         return batch_x, batch_y
@@ -165,10 +182,10 @@ class Data(object):
             # Turn sentences and labels into vectors
             sentence_vec = helper.get_indicies(sentence,
                                                self.word_dict,
-                                               self.netcfg['max_title_length'])
+                                               self.max_title_length)
 
             label_vec = helper.label_vector(label.split(), self.users_dict,
-                                            self.netcfg['user_count'])
+                                            self.user_count)
             batch_x.append(sentence_vec)
             batch_y.append(label_vec)
         return batch_x, batch_y
@@ -189,3 +206,6 @@ class Data(object):
         self.completed_training_epochs = old_epoch
         return batch_x, batch_y
 
+    def get_stats(self):
+        """ Returns statistics about embedding matrix """
+        return self.train_present, self.train_absent, self.valid_present, self.valid_absent
