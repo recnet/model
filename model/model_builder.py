@@ -51,10 +51,19 @@ class ModelBuilder(object):
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
-            tf.random_uniform(
-                [self._model.vocabulary_size, self._model.embedding_size],
-                - 1.0, 1.0, dtype=tf.float64),
-            name="embeddings")
+            tf.constant(0.0,
+                        shape=[self._model.vocabulary_size,
+                               self._model.pre_trained_dimension],
+                        dtype=tf.float64),
+            trainable=self._model.is_trainable_matrix,
+            name="embedding_matrix",
+            dtype=tf.float64)
+
+        self.embedding_placeholder = \
+            tf.placeholder(tf.float64,
+                           [self._model.vocabulary_size, self._model.pre_trained_dimension])
+        self.embedding_init = \
+            embedding_matrix.assign(self.embedding_placeholder)
 
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._model._input)

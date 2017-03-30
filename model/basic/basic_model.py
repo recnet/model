@@ -61,6 +61,9 @@ class Model(object):
         self.dropout_prob = config['dropout_prob'] # Only used for train op
         self.hidden_layers = config['hidden_layers']
         self.hidden_neurons = config['hidden_neurons']
+        self.is_trainable_matrix = config['trainable_matrix']
+        self.use_pretrained = config['use_pretrained']
+        self.pre_trained_dimension = config['pre_trained_dimension']
 
 
         # Will be set in build_graph
@@ -73,6 +76,8 @@ class Model(object):
         self.saver = None
         self.epoch = None
         self._keep_prob = None
+        self.embedding_placeholder = None
+        self.embedding_init = None
 
         self.logging_dir = build_structure(config)
         self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
