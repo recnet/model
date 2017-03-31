@@ -23,7 +23,7 @@
 # ==============================================================================
 
 import tensorflow as tf
-from model.basic.basic_model import Model
+from model.model import Model
 
 class ModelBuilder(object):
     """A class following the builder pattern to create a model"""

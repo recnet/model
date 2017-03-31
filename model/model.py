@@ -31,9 +31,9 @@ import glob
 import os.path
 import tensorflow as tf
 from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
-from ..util import data as data
-from ..util.folder_builder import build_structure
-from ..util.writer import log_config
+from .util import data as data
+from .util.folder_builder import build_structure
+from .util.writer import log_config
 
 
 # TODO Separera checkpoints ut ur modell klassen

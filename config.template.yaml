@@ -2,7 +2,7 @@ data:
   path: 'resources/datasets/'
 
 network:
-  - type: 'basic'
+  - type: 'model-builder'
     name: 'network1'
     vocabulary_size: 10000
     user_count: 6
@@ -23,7 +23,7 @@ network:
     constant_prediction_limit: 0.3
     trainable_matrix: true
     pre_trained_dimension: 50
-    pre_trained_matrix: 'glove.6B.50d.txt'
+    pre_trained_matrix: 'vectors150d.txt'
     use_pretrained: true
     validation_data: 'validation_data_top_n_single.csv'
     training_data: 'training_data_top_n_single.csv'
