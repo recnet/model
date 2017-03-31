@@ -34,16 +34,21 @@ class ModelBuilder(object):
         self.number_of_layers = 0
 
     def add_input_layer(self):
-        """Adds a input layer to the graph, no other layers can be added before this has been added"""
+        """
+        Adds a input layer to the graph, no other layers can
+        be added before this has been added
+        """
         self._model.epoch = tf.Variable(0, dtype=tf.int32, name="train_epoch")
 
-        self._model._input = tf.placeholder(tf.int32,
-                                     [None, self._model.max_title_length],
-                                     name="input")
+        self._model._input = \
+            tf.placeholder(tf.int32,
+                           [None, self._model.max_title_length],
+                           name="input")
 
-        self._model._target = tf.placeholder(tf.float64,
-                                      [None, self._model.user_count],
-                                      name="target")
+        self._model._target = \
+            tf.placeholder(tf.float64,
+                           [None, self._model.user_count],
+                           name="target")
 
         self._model._keep_prob = tf.placeholder(tf.float64, name="keep_prob")
 
@@ -87,32 +92,36 @@ class ModelBuilder(object):
                 [self._model.lstm_neurons, number_of_neurons],
                 stddev=0.35,
                 dtype=tf.float64),
-                                    name="weights" + str(self.number_of_layers))
+                                  name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
-                                                    stddev=0.35,
-                                                    dtype=tf.float64),
-                                   name="biases" + str(self.number_of_layers))
+                                                stddev=0.35,
+                                                dtype=tf.float64),
+                               name="biases" + str(self.number_of_layers))
 
         else:
             weights = tf.Variable(tf.random_normal(
                 [self._model.latest_layer.get_shape()[1].value, number_of_neurons],
                 stddev=0.35,
                 dtype=tf.float64),
-                                name="weights" + str(self.number_of_layers))
+                                  name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
-                                                 stddev=0.35,
-                                                 dtype=tf.float64),
-                                name="biases" + str(self.number_of_layers))
+                                                stddev=0.35,
+                                                dtype=tf.float64),
+                               name="biases" + str(self.number_of_layers))
 
         logits = tf.add(tf.matmul(self._model.latest_layer, weights), bias)
-        self._model.latest_layer = tf.nn.relu(logits, name="hidden_layer-" + str(self.number_of_layers))
+        self._model.latest_layer = tf.nn.relu(
+            logits, name="hidden_layer-" + str(self.number_of_layers))
 
         if self._model.use_l2_loss:
-            self._model.l2_term = tf.add(tf.add(self._model.l2_term, tf.nn.l2_loss(weights)), tf.nn.l2_loss(bias))
+            self._model.l2_term = tf.add(
+                tf.add(self._model.l2_term, tf.nn.l2_loss(weights)),
+                tf.nn.l2_loss(bias))
         if self._model.use_dropout:
-            self._model.latest_layer = tf.nn.dropout(self._model.latest_layer,
-                                                    self._model.dropout_prob,
-                                                    name="hidden_layer" + str(self.number_of_layers) + "dropout")
+            self._model.latest_layer = \
+                tf.nn.dropout(self._model.latest_layer,
+                              self._model.dropout_prob,
+                              name="hidden_layer" + str(self.number_of_layers) + "dropout")
 
         return self
 
@@ -126,7 +135,7 @@ class ModelBuilder(object):
             [self._model.latest_layer.get_shape()[1].value, self._model.user_count],
             stddev=0.35,
             dtype=tf.float64),
-            name="weights")
+                                      name="weights")
 
         sigmoid_bias = tf.Variable(tf.random_normal([self._model.user_count],
                                                     stddev=0.35,
@@ -143,10 +152,15 @@ class ModelBuilder(object):
                                                         logits=logits)
 
         if self._model.use_l2_loss:
-            cross_entropy = tf.reduce_mean(tf.add(tf.add(error
-                                           , tf.multiply(self._model.l2_factor, tf.nn.l2_loss(sigmoid_weights)))
-                                           , tf.add(tf.multiply(self._model.l2_factor, tf.nn.l2_loss(sigmoid_bias))
-                                           , tf.multiply(self._model.l2_factor, self._model.l2_term))))
+            cross_entropy = \
+                tf.reduce_mean(tf.add(
+                    tf.add(error,
+                           tf.multiply(self._model.l2_factor,
+                                       tf.nn.l2_loss(sigmoid_weights))),
+                    tf.add(tf.multiply(self._model.l2_factor,
+                                       tf.nn.l2_loss(sigmoid_bias)),
+                           tf.multiply(self._model.l2_factor,
+                                       self._model.l2_term))))
         else:
             cross_entropy = tf.reduce_mean(error)
 
@@ -167,10 +181,10 @@ class ModelBuilder(object):
         self._model.predictions = tf.map_fn(top_k_to_bool, self._model.sigmoid, dtype=tf.bool)
         # Need to create two different precisions, because they have
         # internal memory of old values
-        self._model.precision_validation = tf.metrics.precision(self._model._target,
-                                                         self._model.predictions)
-        self._model.precision_training = tf.metrics.precision(self._model._target,
-                                                       self._model.predictions)
+        self._model.precision_validation = \
+            tf.metrics.precision(self._model._target, self._model.predictions)
+        self._model.precision_training = \
+            tf.metrics.precision(self._model._target, self._model.predictions)
         self._model.error_sum = tf.summary.scalar('cross_entropy', self._model.error)
 
         # Need to create two different, because they have internal memory
@@ -187,7 +201,7 @@ class ModelBuilder(object):
         self.add_input_layer()
 
         # Add a number of hidden layers
-        for i in range(self._model.hidden_layers):
+        for _ in range(self._model.hidden_layers):
             self.add_layer(self._model.hidden_neurons)
 
         self.add_output_layer()
