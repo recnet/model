@@ -22,7 +22,6 @@ network:
     use_constant_limit: false
     constant_prediction_limit: 0.3
     trainable_matrix: true
-    pre_trained_dimension: 50
     pre_trained_matrix: 'vectors150d.txt'
     use_pretrained: true
     validation_data: 'validation_data_top_n_single.csv'

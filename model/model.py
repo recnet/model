@@ -63,7 +63,6 @@ class Model(object):
         self.hidden_neurons = config['hidden_neurons']
         self.is_trainable_matrix = config['trainable_matrix']
         self.use_pretrained = config['use_pretrained']
-        self.pre_trained_dimension = config['pre_trained_dimension']
         self.use_constant_limit = config['use_constant_limit']
         self.constant_prediction_limit = config['constant_prediction_limit']
 

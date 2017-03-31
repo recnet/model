@@ -58,7 +58,7 @@ class ModelBuilder(object):
         embedding_matrix = tf.Variable(
             tf.constant(0.0,
                         shape=[self._model.vocabulary_size,
-                               self._model.pre_trained_dimension],
+                               self._model.embedding_size],
                         dtype=tf.float64),
             trainable=self._model.is_trainable_matrix,
             name="embedding_matrix",
@@ -66,7 +66,7 @@ class ModelBuilder(object):
 
         self._model.embedding_placeholder = \
             tf.placeholder(tf.float64,
-                           [self._model.vocabulary_size, self._model.pre_trained_dimension])
+                           [self._model.vocabulary_size, self._model.embedding_size])
         self._model.embedding_init = \
             embedding_matrix.assign(self._model.embedding_placeholder)
 
