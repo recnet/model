@@ -149,33 +149,24 @@ class Model(object):
         self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN, self._session.graph)
         self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
 
-        error_sum = 0
-        val_error_sum = 0
         old_epoch = 0
 
         if self.epoch.eval(self._session) == 0:
             self.validate()
-        # Train for a specified amount of epochs
 
+        # Train for a specified amount of epochs
         for i in self.data.for_n_train_epochs(self.training_epochs,
                                               self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
-            self.train_batch()
-            # validation_error = self.validate_batch()
-
-            # error_sum += error
-            # val_error_sum += validation_error
+            training_error = self.train_batch()
+            validation_error = self.validate_batch()
 
             # Don't validate so often
-            #            if i % (self.data.train_size // self.config['batch_size'] // 10) == 0 and i:
-            #                 avg_val_err = val_error_sum / i
-            #                 avg_trn_err = error_sum / i
-            #                 print("Training... Epoch: {:d}, Done: {:%}" \
-            #                       .format(epoch, done))
-            #                 print("Validation error: {:f} ({:f}), Training error {:f} ({:f})" \
-            #                       .format(validation_error, avg_val_err, error, avg_trn_err))
-            #
+            if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
+                done = self.data.percent_of_epoch
+                print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}"
+                      .format(validation_error, training_error, done))
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
@@ -185,8 +176,8 @@ class Model(object):
                 self.validate()
             old_epoch = epoch
 
-            # Save model when done training
-            # self.save_checkpoint()
+        # Save model when done training
+        self.save_checkpoint()
 
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
