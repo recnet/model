@@ -158,27 +158,77 @@ class ModelBuilder(object):
 
     def add_precision_operations(self):
         """Adds precision operation and tensorboard operations"""
-        # Cast a tensor to booleans, where top k are True, else False
-        top_k_to_bool = lambda x: tf.greater_equal(
-            x, tf.reduce_min(
-                tf.nn.top_k(x, k=self._model.users_to_select)[0]))
+        # Determine which prediction function to use. Casts a tensor to
+        # booleans.
+        if self._model.use_constant_limit:
+            # x above limit are True, else False
+            prediction_func = lambda x: tf.greater_equal(
+                x, self._model.constant_prediction_limit)
+        else:
+            # x above mean are True, else False
+            prediction_func = lambda x: tf.greater_equal(
+                x, tf.reduce_mean(x))
 
         # Convert all probibalistic predictions to discrete predictions
-        self._model.predictions = tf.map_fn(top_k_to_bool, self._model.sigmoid, dtype=tf.bool)
+        self._model.predictions = \
+            tf.map_fn(prediction_func, self._model.sigmoid, dtype=tf.bool)
+
+        # Calculate precision
         # Need to create two different precisions, because they have
         # internal memory of old values
-        self._model.precision_validation = tf.metrics.precision(self._model._target,
-                                                         self._model.predictions)
-        self._model.precision_training = tf.metrics.precision(self._model._target,
-                                                       self._model.predictions)
-        self._model.error_sum = tf.summary.scalar('cross_entropy', self._model.error)
+        _, self._model.precision_validation = \
+            tf.metrics.precision(self._model._target,
+                                 self._model.predictions)
+        _, self._model.precision_training = \
+            tf.metrics.precision(self._model._target,
+                                 self._model.predictions)
+        # Calculate recall
+        _, self._model.recall_validation = \
+            tf.metrics.recall(self._model._target,
+                              self._model.predictions)
+        _, self._model.recall_training = \
+            tf.metrics.recall(self._model._target,
+                              self._model.predictions)
+
+        # Calculate F1-score: 2 * (prec * recall) / (prec + recall)
+        self._model.f1_score_validation = \
+            tf.multiply(2.0,
+                        tf.truediv(tf.multiply(self._model.precision_validation,
+                                               self._model.recall_validation),
+                                   tf.add(self._model.precision_validation,
+                                          self._model.recall_validation)))
+        self._model.f1_score_training = \
+            tf.multiply(2.0,
+                        tf.truediv(tf.multiply(self._model.precision_training,
+                                               self._model.recall_training),
+                                   tf.add(self._model.precision_training,
+                                          self._model.recall_training)))
+
+        self._model.error_sum = \
+            tf.summary.scalar('cross_entropy', self._model.error)
 
         # Need to create two different, because they have internal memory
         # of old values
         self._model.prec_sum_validation = \
-            tf.summary.scalar('precision', self._model.precision_validation[1])
+            tf.summary.scalar('precision_validation',
+                              self._model.precision_validation)
         self._model.prec_sum_training = \
-            tf.summary.scalar('precision', self._model.precision_training[1])
+            tf.summary.scalar('precision_training',
+                              self._model.precision_training)
+
+        self._model.recall_sum_validation = \
+            tf.summary.scalar('recall_validation',
+                              self._model.recall_validation)
+        self._model.recall_sum_training = \
+            tf.summary.scalar('recall_training',
+                              self._model.recall_training)
+
+        self._model.f1_sum_validation = \
+            tf.summary.scalar('f1_score_validation',
+                              self._model.f1_score_validation)
+        self._model.f1_sum_training = \
+            tf.summary.scalar('f1_score_training',
+                              self._model.f1_score_training)
 
         return self
 
