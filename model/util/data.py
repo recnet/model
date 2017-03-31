@@ -38,11 +38,10 @@ class Data(object):
         self.completed_training_epochs = 0
         self.percent_of_epoch = 0.0
         self.title_length = networkconfig['max_title_length']
-        self.user_count = networkconfig['users_to_select']
         self.batch_size = self.netcfg['batch_size']
         self.reader = CsvReader(networkconfig)
         self.use_pretrained = self.netcfg['use_pretrained']
-        self.pre_trained_dimension = self.netcfg['pre_trained_dimension']
+        self.embedding_size = self.netcfg['embedding_size']
         self.pre_trained_matrix = self.netcfg['pre_trained_matrix']
         self.vocabulary_size = self.netcfg['vocabulary_size']
         self.user_count = self.netcfg['user_count']
@@ -83,7 +82,7 @@ class Data(object):
             self.word_dict, self.embedding_matrix = \
                 self.reader.test_load_pretrained_embeddings(
                     self.pre_trained_matrix,
-                    self.pre_trained_dimension)
+                    self.embedding_size)
         users = " ".join(self.train_labels).split()
         _, _, self.users_dict, self.rev_users_dict = \
             helper.build_dataset(users, vocabulary_size=self.user_count)
