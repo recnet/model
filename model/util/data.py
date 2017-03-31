@@ -38,7 +38,6 @@ class Data(object):
         self.completed_training_epochs = 0
         self.percent_of_epoch = 0.0
         self.title_length = networkconfig['max_title_length']
-        self.user_count = networkconfig['users_to_select']
         self.batch_size = self.netcfg['batch_size']
         self.reader = CsvReader(networkconfig)
         self.use_pretrained = self.netcfg['use_pretrained']

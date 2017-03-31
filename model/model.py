@@ -54,7 +54,6 @@ class Model(object):
         self.lstm_neurons = config['lstm_neurons']
         self.batch_size = config['batch_size']
         self.training_epochs = config['training_epochs']
-        self.users_to_select = config['users_to_select']
         self.use_l2_loss = config['use_l2_loss']
         self.l2_factor = config['l2_factor']
         self.use_dropout = config['use_dropout']
