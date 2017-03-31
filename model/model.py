@@ -30,15 +30,17 @@ Technology and the University of Gothenburg.
 import glob
 import os.path
 import tensorflow as tf
-from definitions import CHECKPOINTS_DIR, TENSOR_DIR_VALID, TENSOR_DIR_TRAIN
+from definitions import *
 from .util import data as data
 from .util.folder_builder import build_structure
-from .util.writer import log_config
+from .util.writer import log_samefile
+from .util.helper import get_val_summary_tensor
 
 
 # TODO Separera checkpoints ut ur modell klassen
 class Model(object):
     def __init__(self, config, session):
+        self.config = config
         self._session = session
         self.output_layer = None
         self.latest_layer = None
@@ -46,24 +48,24 @@ class Model(object):
         self.output_bias = None
         self.l2_term = tf.constant(0, dtype=tf.float64)
 
-        self.vocabulary_size = config['vocabulary_size']
-        self.user_count = config['user_count']
-        self.learning_rate = config['learning_rate']
-        self.embedding_size = config['embedding_size']
-        self.max_title_length = config['max_title_length']
-        self.lstm_neurons = config['lstm_neurons']
-        self.batch_size = config['batch_size']
-        self.training_epochs = config['training_epochs']
-        self.use_l2_loss = config['use_l2_loss']
-        self.l2_factor = config['l2_factor']
-        self.use_dropout = config['use_dropout']
-        self.dropout_prob = config['dropout_prob'] # Only used for train op
-        self.hidden_layers = config['hidden_layers']
-        self.hidden_neurons = config['hidden_neurons']
-        self.is_trainable_matrix = config['trainable_matrix']
-        self.use_pretrained = config['use_pretrained']
-        self.use_constant_limit = config['use_constant_limit']
-        self.constant_prediction_limit = config['constant_prediction_limit']
+        self.vocabulary_size = config[VOC_SIZE]
+        self.user_count = config[USER_COUNT]
+        self.learning_rate = config[LEARN_RATE]
+        self.embedding_size = config[EMBEDD_SIZE]
+        self.max_title_length = config[MAX_TITLE_LENGTH]
+        self.lstm_neurons = config[LSTM_NEURONS]
+        self.batch_size = config[BATCH_SIZE]
+        self.training_epochs = config[TRAINING_EPOCHS]
+        self.use_l2_loss = config[USE_L2_LOSS]
+        self.l2_factor = config[L2_FACTOR]
+        self.use_dropout = config[USE_DROPOUT]
+        self.dropout_prob = config[DROPOUT_PROB] # Only used for train op
+        self.hidden_layers = config[HIDDEN_LAYERS]
+        self.hidden_neurons = config[HIDDEN_NEURONS]
+        self.is_trainable_matrix = config[TRAINABLE_MATRIX]
+        self.use_pretrained = config[USE_PRETRAINED]
+        self.use_constant_limit = config[USE_CONSTANT_LIMIT]
+        self.constant_prediction_limit = config[CONSTANT_PREDICTION_LIMIT]
 
         # Will be set in build_graph
         self.input = None
@@ -92,7 +94,12 @@ class Model(object):
 
         self.logging_dir = build_structure(config)
         self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
-        log_config(config) #Discuss if we should do this after, and somehow take "highest" precision from validation?
+
+        self.f1_score_train = 0
+        self.f1_score_valid = 0
+        self.epoch_top, self.prec_valid, self.prec_train, self.recall_valid, self.recall_train = 0, 0, 0, 0, 0
+
+
 
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
@@ -154,6 +161,13 @@ class Model(object):
         self.train_writer.add_summary(train_recall, epoch)
         self.train_writer.add_summary(train_f1, epoch)
 
+        if self.f1_score_valid < get_val_summary_tensor(val_f1):
+            self.f1_score_valid = get_val_summary_tensor(val_f1)
+            self.f1_score_train = get_val_summary_tensor(train_f1)
+            self.epoch_top, self.prec_valid, self.prec_train, self.recall_valid, self.recall_train = \
+                epoch, get_val_summary_tensor(val_prec), get_val_summary_tensor(train_prec), \
+                get_val_summary_tensor(val_recall), get_val_summary_tensor(train_recall)
+
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
         with tf.device("/cpu:0"):
@@ -208,6 +222,9 @@ class Model(object):
 
         # Save model when done training
         self.save_checkpoint()
+        log_samefile(config=self.config, f1_score_valid=self.f1_score_valid, f1_score_train=self.f1_score_train,
+                     epoch_top=self.epoch_top, prec_valid=self.prec_valid, prec_train=self.prec_train,
+                     recall_valid=self.recall_valid, recall_train=self.recall_train)
 
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
@@ -225,4 +242,5 @@ class Model(object):
         """ Close tensorboard writers """
         self.train_writer.close()
         self.valid_writer.close()
+
 

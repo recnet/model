@@ -23,6 +23,7 @@
 # ==============================================================================
 import collections
 import numpy as np
+import tensorflow as tf
 
 
 def test_with_custom_file(filename):
@@ -113,3 +114,9 @@ def label_vector(users, dic, max_users):
             # If unkown user, set user UNK = 1
             vector[0] = 1
     return vector
+
+
+def get_val_summary_tensor(tensor):
+    summary = tf.summary.Summary.FromString(tensor)
+    return summary.value[0].simple_value
+
