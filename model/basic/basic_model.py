@@ -67,17 +67,19 @@ class Model(object):
 
 
         # Will be set in build_graph
-        self._input = None
-        self._target = None
+        self.input = None
+        self.target = None
         self.sigmoid = None
         self.train_op = None
         self.error = None
-        self._init_op = None
+        self.init_op = None
         self.saver = None
         self.epoch = None
-        self._keep_prob = None
+        self.keep_prob = None
         self.embedding_placeholder = None
         self.embedding_init = None
+        self.train_writer = None
+        self.valid_writer = None
 
         self.logging_dir = build_structure(config)
         self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
@@ -86,6 +88,8 @@ class Model(object):
 
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
+            if self.use_pretrained:
+                self.vocabulary_size = len(self.data.embedding_matrix)
 
 
     def load_checkpoint(self):
@@ -96,7 +100,7 @@ class Model(object):
             self.saver.restore(self._session, self.checkpoints_dir)
             self._session.run(tf.local_variables_initializer())
         else:
-            self._session.run(self._init_op)
+            self._session.run(self.init_op)
 
     def save_checkpoint(self, path=None):
         """ Saves the model to a file """
@@ -113,9 +117,9 @@ class Model(object):
         val_data, val_labels = self.data.get_validation()
         val_prec, val_err = self._session.run([self.prec_sum_validation,
                                                self.error_sum],
-                                              {self._input: val_data,
-                                               self._target: val_labels,
-                                               self._keep_prob: 1.0})
+                                              {self.input: val_data,
+                                               self.target: val_labels,
+                                               self.keep_prob: 1.0})
 
         self.valid_writer.add_summary(val_prec, epoch)
         self.valid_writer.add_summary(val_err, epoch)
@@ -124,9 +128,9 @@ class Model(object):
         train_data, train_labels = self.data.get_training()
         train_prec, train_err = self._session.run([self.prec_sum_training,
                                                    self.error_sum],
-                                                  {self._input: train_data,
-                                                   self._target: train_labels,
-                                                   self._keep_prob: 1.0})
+                                                  {self.input: train_data,
+                                                   self.target: train_labels,
+                                                   self.keep_prob: 1.0})
         self.train_writer.add_summary(train_prec, epoch)
         self.train_writer.add_summary(train_err, epoch)
         return None
@@ -137,8 +141,8 @@ class Model(object):
             data_batch, label_batch = self.data.next_valid_batch()
 
         return self._session.run(self.error,
-                                 feed_dict={self._input: data_batch,
-                                            self._target: label_batch})
+                                 feed_dict={self.input: data_batch,
+                                            self.target: label_batch})
 
     # TODO funktionen gör alldeles för mycket,
     # dela upp utskrift, beräkning och träning
@@ -146,8 +150,15 @@ class Model(object):
         """ Trains the model on the dataset """
         print("Starting training...")
 
-        self.train_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN, self._session.graph)
-        self.valid_writer = tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
+        if self.use_pretrained:
+            self._session.run(self.embedding_init,
+                              feed_dict={self.embedding_placeholder:
+                                         self.data.embedding_matrix})
+        self.train_writer = \
+            tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN,
+                                  self._session.graph)
+        self.valid_writer = \
+            tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
 
         old_epoch = 0
 
@@ -185,13 +196,14 @@ class Model(object):
             batch_input, batch_label = self.data.next_train_batch()
 
         self._session.run(self.train_op,
-                          {self._input: batch_input,
-                           self._target: batch_label})
+                          {self.input: batch_input,
+                           self.target: batch_label})
 
         return self._session.run(self.error,
-                                 feed_dict={self._input: batch_input,
-                                            self._target: batch_label})
+                                 feed_dict={self.input: batch_input,
+                                            self.target: batch_label})
     def close_writers(self):
+        """ Close tensorboard writers """
         self.train_writer.close()
         self.valid_writer.close()
 

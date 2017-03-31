@@ -40,17 +40,17 @@ class ModelBuilder(object):
         """
         self._model.epoch = tf.Variable(0, dtype=tf.int32, name="train_epoch")
 
-        self._model._input = \
+        self._model.input = \
             tf.placeholder(tf.int32,
                            [None, self._model.max_title_length],
                            name="input")
 
-        self._model._target = \
+        self._model.target = \
             tf.placeholder(tf.float64,
                            [None, self._model.user_count],
                            name="target")
 
-        self._model._keep_prob = tf.placeholder(tf.float64, name="keep_prob")
+        self._model.keep_prob = tf.placeholder(tf.float64, name="keep_prob")
 
         lstm_layer = tf.contrib.rnn.LSTMCell(self._model.lstm_neurons, state_is_tuple=True)
 
@@ -64,14 +64,14 @@ class ModelBuilder(object):
             name="embedding_matrix",
             dtype=tf.float64)
 
-        self.embedding_placeholder = \
+        self._model.embedding_placeholder = \
             tf.placeholder(tf.float64,
                            [self._model.vocabulary_size, self._model.pre_trained_dimension])
-        self.embedding_init = \
-            embedding_matrix.assign(self.embedding_placeholder)
+        self._model.embedding_init = \
+            embedding_matrix.assign(self._model.embedding_placeholder)
 
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
-                                                self._model._input)
+                                                self._model.input)
         # Run the LSTM layer with the embedded input
         outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
                                        dtype=tf.float64)
@@ -135,12 +135,12 @@ class ModelBuilder(object):
             [self._model.latest_layer.get_shape()[1].value, self._model.user_count],
             stddev=0.35,
             dtype=tf.float64),
-                                      name="weights")
+                                      name="output_weights")
 
         sigmoid_bias = tf.Variable(tf.random_normal([self._model.user_count],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
-                                   name="biases")
+                                   name="output_biases")
 
         logits = tf.add(tf.matmul(self._model.latest_layer, sigmoid_weights), sigmoid_bias)
         self._model.sigmoid = tf.nn.sigmoid(logits)
@@ -148,7 +148,7 @@ class ModelBuilder(object):
         # Training
 
         # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._model._target,
+        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._model.target,
                                                         logits=logits)
 
         if self._model.use_l2_loss:
@@ -182,9 +182,9 @@ class ModelBuilder(object):
         # Need to create two different precisions, because they have
         # internal memory of old values
         self._model.precision_validation = \
-            tf.metrics.precision(self._model._target, self._model.predictions)
+            tf.metrics.precision(self._model.target, self._model.predictions)
         self._model.precision_training = \
-            tf.metrics.precision(self._model._target, self._model.predictions)
+            tf.metrics.precision(self._model.target, self._model.predictions)
         self._model.error_sum = tf.summary.scalar('cross_entropy', self._model.error)
 
         # Need to create two different, because they have internal memory
@@ -208,8 +208,8 @@ class ModelBuilder(object):
 
         self.add_precision_operations()
 
-        self._model._init_op = tf.group(tf.global_variables_initializer(),
-                                        tf.local_variables_initializer())
+        self._model.init_op = tf.group(tf.global_variables_initializer(),
+                                       tf.local_variables_initializer())
         self._model.saver = tf.train.Saver()
         self._model.load_checkpoint()
         return self._model

@@ -24,6 +24,7 @@
 import argparse
 import tensorflow as tf
 from model.util.networkconfig import yamlconfig as networkconfig
+from model.model_builder import ModelBuilder
 
 def main():
     """ A main method that creates the model and starts training it """
@@ -36,6 +37,8 @@ def main():
     for conf in args.configs:
         config_file = networkconfig[conf]
         with tf.Session() as sess:
+            # builder = ModelBuilder(config_file, sess)
+            # network_model = builder.build()
             network_model = get_model(config_file['type'], config_file, sess)
             network_model.train()
             network_model.close_writers()
