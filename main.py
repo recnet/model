@@ -37,9 +37,9 @@ def main():
     for conf in args.configs:
         config_file = networkconfig[conf]
         with tf.Session() as sess:
-            # builder = ModelBuilder(config_file, sess)
-            # network_model = builder.build()
-            network_model = get_model(config_file['type'], config_file, sess)
+            builder = ModelBuilder(config_file, sess)
+            network_model = builder.build()
+            #network_model = get_model(config_file['type'], config_file, sess)
             network_model.train()
             network_model.close_writers()
         tf.reset_default_graph()
