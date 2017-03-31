@@ -41,16 +41,22 @@ class CsvReader:
         self.netcfg = netcfg
         self.encoding = 'UTF-8'
 
-    def get_data(self, datatype, data_column=[0], label_column=1):
+    def get_data(self, datatype, data_column=[0], sub_column=1, label_column=2):
         """ A function that reads the data and
         corresponding label from a CSV file """
         file_path = os.path.join(DATASETS_PATH, self.netcfg[datatype.value])
         with open(file_path, 'r', encoding=self.encoding) as csvfile:
             reader = csv.reader(csvfile)
             data_full = []
+            subreddit_full = []
             label_full = []
             for row in reader:
+                if len(row) < 3:
+                    print(len(row))
+                    print(row)
+                    print(datatype)
                 data = ""
+                subreddit = row[sub_column]
                 label = row[label_column]
                 for elem in data_column:
                     col = row[elem]
@@ -66,7 +72,8 @@ class CsvReader:
                 label = label.replace(',', '')
                 data_full.append(data.strip(' ').strip(','))
                 label_full.append(label)
-            return data_full, label_full
+                subreddit_full.append(subreddit)
+            return data_full, subreddit_full, label_full
 
 
     def test_load_pretrained_embeddings(self, fileName, dimension_size=50):

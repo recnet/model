@@ -58,17 +58,20 @@ class Data(object):
         """ Reads all the data from specified path """
         logging.debug("Reading training data...")
 
-        self.train_data, self.train_labels = self.reader.get_data(Dataenum.TRAINING)
+        self.train_data, self.train_subreddits, self.train_labels = \
+            self.reader.get_data(Dataenum.TRAINING)
         self.train_size = len(self.train_data)
 
         logging.debug("Reading validation data...")
 
-        self.validation_data, self.valid_labels = self.reader.get_data(Dataenum.VALIDATION)
+        self.validation_data, self.valid_subreddits, self.valid_labels = \
+            self.reader.get_data(Dataenum.VALIDATION)
         self.validation_size = len(self.validation_data)
 
         logging.debug("Reading testing data...")
 
-        self.test_data, self.test_labels = self.reader.get_data(Dataenum.TESTING)
+        self.test_data, self.test_subreddits, self.test_labels = \
+            self.reader.get_data(Dataenum.TESTING)
         self.test_size = len(self.test_data)
 
     def _build_dict(self):
@@ -87,13 +90,18 @@ class Data(object):
         _, _, self.users_dict, self.rev_users_dict = \
             helper.build_dataset(users, vocabulary_size=self.user_count)
 
+        subreddits = " ".join(self.train_subreddits).split()
+        self.subreddit_dict = helper.build_subreddit_dict(subreddits)
+
     def next_train_batch(self, batch_size=None):
         """ Get the next batch of training data """
         batch_size = batch_size or self.batch_size
         batch_x = []
+        batch_sub = []
         batch_y = []
         for _ in range(0, batch_size):
             sentence = self.train_data[self._current_train_index]
+            subreddit = self.train_subreddits[self._current_train_index]
             label = self.train_labels[self._current_train_index]
             self._current_train_index += 1
             # Support multiple epochs
@@ -110,29 +118,36 @@ class Data(object):
                                     self.max_title_length)
             self.train_present += present
             self.train_absent += absent
+
+            subreddit_vec = helper.subreddit_index(subreddit,
+                                                   self.subreddit_dict)
+
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)
             batch_x.append(sentence_vec)
+            batch_sub.append(subreddit_vec)
             batch_y.append(label_vec)
 
         self.percent_of_epoch = self._current_train_index / self.train_size
-        return batch_x, batch_y
+        return batch_x, batch_sub, batch_y
 
     def get_validation(self):
         """ Get the whole validation set in a vectorized form """
         old_ind = self._current_valid_index
         self._current_valid_index = 0
-        batch_x, batch_y = self.next_valid_batch()
+        batch_x, batch_sub, batch_y = self.next_valid_batch()
         self._current_valid_index = old_ind
-        return batch_x, batch_y
+        return batch_x, batch_sub, batch_y
 
     def next_valid_batch(self, batch_size=None):
         """ Get the next batch of validation data """
         batch_size = batch_size or self.batch_size
         batch_x = []
+        batch_sub = []
         batch_y = []
         for _ in range(0, batch_size):
             sentence = self.validation_data[self._current_valid_index]
+            subreddit = self.valid_subreddits[self._current_valid_index]
             label = self.valid_labels[self._current_valid_index]
 
             self._current_valid_index += 1
@@ -149,27 +164,34 @@ class Data(object):
 
             self.valid_present += pres
             self.valid_absent += absent
+
+            subreddit_vec = helper.subreddit_index(subreddit,
+                                                   self.subreddit_dict)
+
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)
             batch_x.append(sentence_vec)
+            batch_sub.append(subreddit_vec)
             batch_y.append(label_vec)
-        return batch_x, batch_y
+        return batch_x, batch_sub, batch_y
 
     def get_testing(self):
         """ Get the whole validation set in a vectorized form """
         old_ind = self._current_test_index
         self._current_test_index = 0
-        batch_x, batch_y = self.next_test_batch(self.test_size)
+        batch_x, batch_sub, batch_y = self.next_test_batch(self.test_size)
         self._current_test_index = old_ind
-        return batch_x, batch_y
+        return batch_x, batch_sub, batch_y
 
     def next_test_batch(self, batch_size=None):
         """ Get the next batch of validation data """
         batch_size = batch_size or self.batch_size
         batch_x = []
+        batch_sub = []
         batch_y = []
         for _ in range(0, batch_size):
             sentence = self.test_data[self._current_test_index]
+            subreddit = self.test_subreddits[self._current_test_index]
             label = self.test_labels[self._current_test_index]
 
             self._current_test_index += 1
@@ -183,11 +205,15 @@ class Data(object):
                                                self.word_dict,
                                                self.max_title_length)
 
+            subreddit_vec = helper.subreddit_index(subreddit,
+                                                   self.subreddit_dict)
+
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)
             batch_x.append(sentence_vec)
+            batch_sub.append(subreddit_vec)
             batch_y.append(label_vec)
-        return batch_x, batch_y
+        return batch_x, batch_sub, batch_y
 
     def for_n_train_epochs(self, num_epochs=1, batch_size=25):
         # TODO Ta bort parameterar
@@ -200,10 +226,10 @@ class Data(object):
         old_ind = self._current_train_index
         old_epoch = self.completed_training_epochs
         self._current_train_index = 0
-        batch_x, batch_y = self.next_train_batch(self.train_size)
+        batch_x, batch_sub, batch_y = self.next_train_batch(self.train_size)
         self._current_train_index = old_ind
         self.completed_training_epochs = old_epoch
-        return batch_x, batch_y
+        return batch_x, batch_sub, batch_y
 
     def get_stats(self):
         """ Returns statistics about embedding matrix """

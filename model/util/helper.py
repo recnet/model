@@ -113,3 +113,20 @@ def label_vector(users, dic, max_users):
             # If unkown user, set user UNK = 1
             vector[0] = 1
     return vector
+
+def build_subreddit_dict(subreddits):
+    """
+    Takes a list of all subreddits and creates a dictionary
+    of unique subreddits
+    """
+    unk = ['UNK']
+    unique_subs = list(set(subreddits))
+    dictionary = [item for sublist in [unk, unique_subs] for item in sublist]
+    return dictionary
+
+def subreddit_index(subreddit, dic):
+    """ Turns a subreddit into an index """
+    if subreddit in dic:
+        return [dic.index(subreddit)]
+    else:
+        return [0]
