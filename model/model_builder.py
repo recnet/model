@@ -219,12 +219,23 @@ class ModelBuilder(object):
                                                self._model.recall_validation),
                                    tf.add(self._model.precision_validation,
                                           self._model.recall_validation)))
+        # Convert to 0 if f1 score is NaN
+        self._model.f1_score_validation = \
+            tf.where(tf.is_nan(self._model.f1_score_validation),
+                     tf.zeros_like(self._model.f1_score_validation),
+                     self._model.f1_score_validation)
+
         self._model.f1_score_training = \
             tf.multiply(2.0,
                         tf.truediv(tf.multiply(self._model.precision_training,
                                                self._model.recall_training),
                                    tf.add(self._model.precision_training,
                                           self._model.recall_training)))
+        # Convert to 0 if f1 score is NaN
+        self._model.f1_score_training = \
+            tf.where(tf.is_nan(self._model.f1_score_training),
+                     tf.zeros_like(self._model.f1_score_training),
+                     self._model.f1_score_training)
 
         self._model.error_sum = \
             tf.summary.scalar('cross_entropy', self._model.error)

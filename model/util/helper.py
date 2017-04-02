@@ -23,6 +23,7 @@
 # ==============================================================================
 import collections
 import numpy as np
+import tensorflow as tf
 
 
 def test_with_custom_file(filename):
@@ -130,3 +131,9 @@ def subreddit_index(subreddit, dic):
         return [dic.index(subreddit)]
     else:
         return [0]
+
+def get_val_summary_tensor(tensor):
+    """ Extract value from tensorboard Summary protobuf """
+    summary = tf.summary.Summary.FromString(tensor)
+    return summary.value[0].simple_value
+
