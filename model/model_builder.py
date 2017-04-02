@@ -44,7 +44,10 @@ class ModelBuilder(object):
             tf.placeholder(tf.int32,
                            [None, self._model.max_title_length],
                            name="input")
-
+        self._model.subreddit_input = \
+            tf.placeholder(tf.float64,
+                           [None, 1],
+                           name="subreddit_input")
         self._model.target = \
             tf.placeholder(tf.float64,
                            [None, self._model.user_count],
@@ -78,6 +81,9 @@ class ModelBuilder(object):
 
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
+        if self._model.use_concat_input:
+            # Add subreddit to end of input
+            output = tf.concat([output, self._model.subreddit_input], 1)
 
         self._model.latest_layer = output
 
@@ -89,7 +95,9 @@ class ModelBuilder(object):
         if not self.added_layers:
             self.added_layers = True
             weights = tf.Variable(tf.random_normal(
-                [self._model.lstm_neurons, number_of_neurons],
+                [self._model.lstm_neurons +
+                 (1 if self._model.use_concat_input else 0),
+                 number_of_neurons],
                 stddev=0.35,
                 dtype=tf.float64),
                                   name="weights" + str(self.number_of_layers))

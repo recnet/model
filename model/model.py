@@ -66,9 +66,11 @@ class Model(object):
         self.use_pretrained = config[USE_PRETRAINED]
         self.use_constant_limit = config[USE_CONSTANT_LIMIT]
         self.constant_prediction_limit = config[CONSTANT_PREDICTION_LIMIT]
+        self.use_concat_input = config[USE_CONCAT_INPUT]
 
         # Will be set in build_graph
         self.input = None
+        self.subreddit_input = None
         self.target = None
         self.sigmoid = None
         self.train_op = None
@@ -129,13 +131,14 @@ class Model(object):
         epoch = self.epoch.eval(self._session)
 
         # Compute validation error
-        val_data, val_labels = self.data.get_validation()
+        val_data, val_sub, val_labels = self.data.get_validation()
         val_prec, val_err, val_recall, val_f1 = \
             self._session.run([self.prec_sum_validation,
                                self.error_sum,
                                self.recall_sum_validation,
                                self.f1_sum_validation],
                               {self.input: val_data,
+                               self.subreddit_input: val_sub,
                                self.target: val_labels,
                                self.keep_prob: 1.0})
 
@@ -146,13 +149,14 @@ class Model(object):
         self.valid_writer.add_summary(val_f1, epoch)
 
         # Compute training error
-        train_data, train_labels = self.data.get_training()
+        train_data, train_sub, train_labels = self.data.get_training()
         train_prec, train_err, train_recall, train_f1 = \
             self._session.run([self.prec_sum_training,
                                self.error_sum,
                                self.recall_sum_training,
                                self.f1_sum_training],
                               {self.input: train_data,
+                               self.subreddit_input: train_sub,
                                self.target: train_labels,
                                self.keep_prob: 1.0})
         # Write results to Tensorboard
@@ -171,11 +175,12 @@ class Model(object):
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
         with tf.device("/cpu:0"):
-            data_batch, label_batch = self.data.next_valid_batch()
+            batch_input, batch_sub, batch_label = self.data.next_valid_batch()
 
         return self._session.run(self.error,
-                                 feed_dict={self.input: data_batch,
-                                            self.target: label_batch})
+                                 feed_dict={self.input: batch_input,
+                                            self.subreddit_input: batch_sub,
+                                            self.target: batch_label})
 
     # TODO funktionen gör alldeles för mycket,
     # dela upp utskrift, beräkning och träning
@@ -229,14 +234,17 @@ class Model(object):
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
         with tf.device("/cpu:0"):
-            batch_input, batch_label = self.data.next_train_batch()
+            batch_input, batch_sub, batch_label = \
+                self.data.next_train_batch()
 
         self._session.run(self.train_op,
                           {self.input: batch_input,
+                           self.subreddit_input: batch_sub,
                            self.target: batch_label})
 
         return self._session.run(self.error,
                                  feed_dict={self.input: batch_input,
+                                            self.subreddit_input: batch_sub,
                                             self.target: batch_label})
     def close_writers(self):
         """ Close tensorboard writers """
