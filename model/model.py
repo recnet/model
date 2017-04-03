@@ -231,6 +231,52 @@ class Model(object):
                      epoch_top=self.epoch_top, prec_valid=self.prec_valid, prec_train=self.prec_train,
                      recall_valid=self.recall_valid, recall_train=self.recall_train)
 
+    def pre_train(self):
+        """ Pre-trains the model on the pre-training dataset """
+        print("Starting pre-training...")
+
+        old_epoch = 0
+
+        if self.use_pretrained:
+            self._session.run(self.embedding_init, feed_dict={
+                                                    self.embedding_placeholder:
+                                                    self.data.embedding_matrix})
+
+        tmp_data, tmp_labels = self.data.get_training()
+        tmp_size = self.data.train_size
+
+        self.data.train_data = self.data.pre_train_data
+        self.data.train_labels = self.data.pre_train_data
+        self.data.train_size = self.data.pre_train_size
+
+        # Train for a specified amount of epochs
+        for i in self.data.for_n_train_epochs(self.training_epochs,
+                                              self.batch_size):
+            # Debug print out
+            epoch = self.data.completed_training_epochs
+            training_error = self.train_batch()
+            # validation_error = self.validate_batch()
+
+            # Don't validate so often
+            if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
+                done = self.data.percent_of_epoch
+                print(
+                    "Validation error: {:f} | Training error: {:f} | Done: {:.0%}"
+                    .format(0, training_error, done))
+
+            # Do a full evaluation once an epoch is complete
+            if epoch != old_epoch:
+                self._session.run(self.epoch.assign_add(1))
+                print("Epoch complete...old ", old_epoch)
+                self.save_checkpoint()
+                # self.validate()
+            old_epoch = epoch
+
+        self.data.train_data = tmp_data
+        self.data.train_labels = tmp_labels
+        self.data.train_size = tmp_size
+        self.data.completed_training_epochs = 0
+
     def train_batch(self):
         """ Trains for one batch and returns cross entropy error """
         with tf.device("/cpu:0"):

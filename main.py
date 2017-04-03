@@ -39,6 +39,8 @@ def main():
         with tf.Session() as sess:
             builder = ModelBuilder(config_file, sess)
             network_model = builder.build()
+            if config_file["pre-train-subreddit"]:
+                network_model.pre_train()
             network_model.train()
             network_model.close_writers()
         tf.reset_default_graph()

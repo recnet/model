@@ -56,6 +56,11 @@ class Data(object):
 
     def _read_data(self):
         """ Reads all the data from specified path """
+        logging.debug("Reading pre-training data...")
+
+        self.pre_train_data, self.pre_train_labels = self.reader.get_data(Dataenum.PRE_TRAINING)
+        self.pre_train_size = len(self.pre_train_data)
+
         logging.debug("Reading training data...")
 
         self.train_data, self.train_subreddits, self.train_labels = \
