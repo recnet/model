@@ -35,8 +35,11 @@ class Data(object):
         self._current_train_index = 0
         self._current_valid_index = 0
         self._current_test_index = 0
+        self._current_pre_train_index = 0
         self.completed_training_epochs = 0
+        self.completed_pre_training_epochs = 0
         self.percent_of_epoch = 0.0
+        self.subreddit_count = 0
         self.title_length = networkconfig['max_title_length']
         self.batch_size = self.netcfg['batch_size']
         self.reader = CsvReader(networkconfig)
@@ -58,8 +61,8 @@ class Data(object):
         """ Reads all the data from specified path """
         logging.debug("Reading pre-training data...")
 
-        self.pre_train_data, self.pre_train_labels = self.reader.get_data(Dataenum.PRE_TRAINING)
-        self.pre_train_size = len(self.pre_train_data)
+        # self.pre_train_data, self.pre_train_labels = self.reader.get_data(Dataenum.TRAINING, label_column=1)
+        # self.pre_train_size = len(self.pre_train_data)
 
         logging.debug("Reading training data...")
 
@@ -97,6 +100,7 @@ class Data(object):
 
         subreddits = " ".join(self.train_subreddits).split()
         self.subreddit_dict = helper.build_subreddit_dict(subreddits)
+        self.subreddit_count = len(self.subreddit_dict)
 
     def next_train_batch(self, batch_size=None):
         """ Get the next batch of training data """
@@ -135,6 +139,39 @@ class Data(object):
 
         self.percent_of_epoch = self._current_train_index / self.train_size
         return batch_x, batch_sub, batch_y
+
+    def next_pre_train_batch(self, batch_size=None):
+        """ Get the next batch of training data """
+        batch_size = batch_size or self.batch_size
+        batch_x = []
+        batch_y = []
+        for _ in range(0, batch_size):
+            sentence = self.train_data[self._current_train_index]
+            label = self.train_labels[self._current_train_index]
+            self._current_pre_train_index += 1
+            # Support multiple epochs
+            if self._current_pre_train_index >= self.train_size:
+                self._current_pre_train_index = 0
+                self.completed_pre_training_epochs += 1
+                self.percent_of_epoch = 0.0
+            # TODO Detta ska inte ligga i funktionen som generar ny data
+
+            # Turn sentences and labels into vector representations
+            sentence_vec, present, absent = \
+                helper.get_indicies(sentence,
+                                    self.word_dict,
+                                    self.max_title_length)
+            self.train_present += present
+            self.train_absent += absent
+
+            label_vec = helper.label_vector(label,
+                                            self.subreddit_dict,
+                                            self.subreddit_count)
+            batch_x.append(sentence_vec)
+            batch_y.append(label_vec)
+
+        self.percent_of_epoch = self._current_train_index / self.train_size
+        return batch_x, batch_y
 
     def get_validation(self):
         """ Get the whole validation set in a vectorized form """
@@ -220,10 +257,10 @@ class Data(object):
             batch_y.append(label_vec)
         return batch_x, batch_sub, batch_y
 
-    def for_n_train_epochs(self, num_epochs=1, batch_size=25):
+    def for_n_train_epochs(self, batch_size=25, num_epochs=1):
         # TODO Ta bort parameterar
         """ Calculates how many training iterations to do for num_epochs
-        number of epochs with a batch size of batch_size """
+        number of epochs with a batch size of batch_size"""
         return range((self.train_size * num_epochs) // batch_size)
 
     def get_training(self):
