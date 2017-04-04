@@ -67,13 +67,17 @@ class Model(object):
         self.use_constant_limit = config[USE_CONSTANT_LIMIT]
         self.constant_prediction_limit = config[CONSTANT_PREDICTION_LIMIT]
         self.use_concat_input = config[USE_CONCAT_INPUT]
+        self.use_pretrained_net = config[USE_PRETRAINED_NET]
+        self.subreddit_count = 0
 
         # Will be set in build_graph
         self.input = None
         self.subreddit_input = None
         self.target = None
+        self.sec_target = None
         self.sigmoid = None
         self.train_op = None
+        self.pre_train_op = None
         self.error = None
         self.init_op = None
         self.saver = None
@@ -105,6 +109,7 @@ class Model(object):
 
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
+            self.subreddit_count = self.data.subreddit_count
             if self.use_pretrained:
                 self.vocabulary_size = len(self.data.embedding_matrix)
 
@@ -184,7 +189,7 @@ class Model(object):
 
     # TODO funktionen gör alldeles för mycket,
     # dela upp utskrift, beräkning och träning
-    def train(self):
+    def train(self, use_pretrained_net=False):
         """ Trains the model on the dataset """
         print("Starting training...")
 
@@ -200,29 +205,33 @@ class Model(object):
 
         old_epoch = 0
 
-        if self.epoch.eval(self._session) == 0:
+        if self.epoch.eval(self._session) == 0 and not use_pretrained_net:
             self.validate()
 
         # Train for a specified amount of epochs
-        for i in self.data.for_n_train_epochs(self.training_epochs,
-                                              self.batch_size):
+        for i in self.data.for_n_train_epochs(self.batch_size, self.training_epochs):
             # Debug print out
             epoch = self.data.completed_training_epochs
-            training_error = self.train_batch()
-            validation_error = self.validate_batch()
 
-            # Don't validate so often
-            if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
-                done = self.data.percent_of_epoch
-                print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}"
-                      .format(validation_error, training_error, done))
+            if not use_pretrained_net:
+                training_error = self.train_batch()
+                validation_error = self.validate_batch()
+
+                # Don't validate so often
+                if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
+                    done = self.data.percent_of_epoch
+                    print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}"
+                          .format(validation_error, training_error, done))
+            else:
+                self.train_batch(True)
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
                 self._session.run(self.epoch.assign_add(1))
                 print("Epoch complete...old ", old_epoch)
                 self.save_checkpoint()
-                self.validate()
+                if not self.use_pretrained_net:
+                    self.validate()
             old_epoch = epoch
 
         # Save model when done training
@@ -231,67 +240,30 @@ class Model(object):
                      epoch_top=self.epoch_top, prec_valid=self.prec_valid, prec_train=self.prec_train,
                      recall_valid=self.recall_valid, recall_train=self.recall_train)
 
-    def pre_train(self):
-        """ Pre-trains the model on the pre-training dataset """
-        print("Starting pre-training...")
-
-        old_epoch = 0
-
-        if self.use_pretrained:
-            self._session.run(self.embedding_init, feed_dict={
-                                                    self.embedding_placeholder:
-                                                    self.data.embedding_matrix})
-
-        tmp_data, tmp_labels = self.data.get_training()
-        tmp_size = self.data.train_size
-
-        self.data.train_data = self.data.pre_train_data
-        self.data.train_labels = self.data.pre_train_data
-        self.data.train_size = self.data.pre_train_size
-
-        # Train for a specified amount of epochs
-        for i in self.data.for_n_train_epochs(self.training_epochs,
-                                              self.batch_size):
-            # Debug print out
-            epoch = self.data.completed_training_epochs
-            training_error = self.train_batch()
-            # validation_error = self.validate_batch()
-
-            # Don't validate so often
-            if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
-                done = self.data.percent_of_epoch
-                print(
-                    "Validation error: {:f} | Training error: {:f} | Done: {:.0%}"
-                    .format(0, training_error, done))
-
-            # Do a full evaluation once an epoch is complete
-            if epoch != old_epoch:
-                self._session.run(self.epoch.assign_add(1))
-                print("Epoch complete...old ", old_epoch)
-                self.save_checkpoint()
-                # self.validate()
-            old_epoch = epoch
-
-        self.data.train_data = tmp_data
-        self.data.train_labels = tmp_labels
-        self.data.train_size = tmp_size
-        self.data.completed_training_epochs = 0
-
-    def train_batch(self):
+    def train_batch(self, pre_train_net=False):
         """ Trains for one batch and returns cross entropy error """
         with tf.device("/cpu:0"):
-            batch_input, batch_sub, batch_label = \
-                self.data.next_train_batch()
+            if not pre_train_net:
+                batch_input, batch_sub, batch_label = \
+                    self.data.next_train_batch()
+            else:
+                batch_input, batch_label = \
+                    self.data.next_pre_train_batch()
 
-        self._session.run(self.train_op,
-                          {self.input: batch_input,
-                           self.subreddit_input: batch_sub,
-                           self.target: batch_label})
+        if pre_train_net:
+            self._session.run(self.pre_train_op,
+                              {self.input: batch_input,
+                               self.sec_target: batch_label})
+        else:
+            self._session.run(self.train_op,
+                              {self.input: batch_input,
+                               self.subreddit_input: batch_sub,
+                               self.target: batch_label})
 
-        return self._session.run(self.error,
-                                 feed_dict={self.input: batch_input,
-                                            self.subreddit_input: batch_sub,
-                                            self.target: batch_label})
+            return self._session.run(self.error,
+                                     feed_dict={self.input: batch_input,
+                                                self.subreddit_input: batch_sub,
+                                                self.target: batch_label})
     def close_writers(self):
         """ Close tensorboard writers """
         self.train_writer.close()
