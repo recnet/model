@@ -52,6 +52,10 @@ class ModelBuilder(object):
             tf.placeholder(tf.float64,
                            [None, self._model.user_count],
                            name="target")
+        self._model.sec_target = \
+            tf.placeholder(tf.float64,
+                           [None, self._model.data.subreddit_count],
+                           name="sec_target")
 
         self._model.keep_prob = tf.placeholder(tf.float64, name="keep_prob")
 
@@ -178,6 +182,49 @@ class ModelBuilder(object):
 
         return self
 
+    def add_secondary_output(self):
+        """Adds a layer that can be used to train the network on data that is
+           labeled in a different way than the final data"""
+        # Output layer
+        # Feed the output of the previous layer to a sigmoid layer
+        sigmoid_weights = tf.Variable(tf.random_normal(
+            [self._model.latest_layer.get_shape()[1].value,
+             self._model.subreddit_count],
+            stddev=0.35,
+            dtype=tf.float64),
+            name="secondary_output_weights")
+
+        sigmoid_bias = tf.Variable(tf.random_normal([self._model.subreddit_count],
+                                                    stddev=0.35,
+                                                    dtype=tf.float64),
+                                   name="secondary_output_biases")
+
+        logits = tf.add(tf.matmul(self._model.latest_layer, sigmoid_weights),
+                        sigmoid_bias)
+        # Training
+
+        # Defne error function
+        error = tf.nn.sigmoid_cross_entropy_with_logits(
+            labels=self._model.sec_target,
+            logits=logits)
+
+        if self._model.use_l2_loss:
+            cross_entropy = \
+                tf.reduce_mean(tf.add(
+                    tf.add(error,
+                           tf.multiply(self._model.l2_factor,
+                                       tf.nn.l2_loss(sigmoid_weights))),
+                    tf.add(tf.multiply(self._model.l2_factor,
+                                       tf.nn.l2_loss(sigmoid_bias)),
+                           tf.multiply(self._model.l2_factor,
+                                       self._model.l2_term))))
+        else:
+            cross_entropy = tf.reduce_mean(error)
+
+        self._model.pre_train_op = tf.train.AdamOptimizer(
+            self._model.learning_rate).minimize(cross_entropy)
+        return self
+
     def add_precision_operations(self):
         """Adds precision operation and tensorboard operations"""
         # Determine which prediction function to use. Casts a tensor to
@@ -267,15 +314,6 @@ class ModelBuilder(object):
 
     def build(self):
         """Adds saver and init operation and returns the model"""
-        self.add_input_layer()
-
-        # Add a number of hidden layers
-        for _ in range(self._model.hidden_layers):
-            self.add_layer(self._model.hidden_neurons)
-
-        self.add_output_layer()
-
-        self.add_precision_operations()
 
         self._model.init_op = tf.group(tf.global_variables_initializer(),
                                        tf.local_variables_initializer())
