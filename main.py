@@ -52,7 +52,6 @@ def main():
             network_model = builder.build()
             if config_file[USE_PRETRAINED_NET]:
                 network_model.train(USE_PRETRAINED_NET)
-                network_model.data.completed_training_epochs = 0
             network_model.train()
             network_model.close_writers()
         tf.reset_default_graph()
