@@ -23,6 +23,7 @@
 # ==============================================================================
 import argparse
 import tensorflow as tf
+from definitions import *
 from model.util.networkconfig import yamlconfig as networkconfig
 from model.model_builder import ModelBuilder
 
@@ -38,9 +39,20 @@ def main():
         config_file = networkconfig[conf]
         with tf.Session() as sess:
             builder = ModelBuilder(config_file, sess)
+            builder.add_input_layer()
+
+            # Add a number of hidden layers
+            for _ in range(config_file[HIDDEN_LAYERS]):
+                builder.add_layer(config_file[HIDDEN_NEURONS])
+
+            builder.add_output_layer()\
+                .add_secondary_output()\
+                .add_precision_operations()
+
             network_model = builder.build()
-            if config_file["pre-train-subreddit"]:
-                network_model.pre_train()
+            if config_file[USE_PRETRAINED_NET]:
+                network_model.train(USE_PRETRAINED_NET)
+                network_model.data.completed_training_epochs = 0
             network_model.train()
             network_model.close_writers()
         tf.reset_default_graph()
