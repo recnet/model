@@ -24,6 +24,7 @@
 
 import tensorflow as tf
 from model.model import Model
+from definitions import *
 
 class ModelBuilder(object):
     """A class following the builder pattern to create a model"""
@@ -321,6 +322,11 @@ class ModelBuilder(object):
     def build(self):
         """Adds saver and init operation and returns the model"""
 
+        self._model.train_writer = \
+            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_TRAIN,
+                                  self._model._session.graph)
+        self._model.valid_writer = \
+            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_VALID)
         self._model.init_op = tf.group(tf.global_variables_initializer(),
                                        tf.local_variables_initializer())
         self._model.saver = tf.train.Saver()

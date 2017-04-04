@@ -257,7 +257,7 @@ class Data(object):
             batch_y.append(label_vec)
         return batch_x, batch_sub, batch_y
 
-    def for_n_train_epochs(self, batch_size=25, num_epochs=1):
+    def for_n_train_epochs(self, num_epochs=1, batch_size=25):
         # TODO Ta bort parameterar
         """ Calculates how many training iterations to do for num_epochs
         number of epochs with a batch size of batch_size"""

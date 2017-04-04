@@ -194,15 +194,12 @@ class Model(object):
         """ Trains the model on the dataset """
         print("Starting training...")
 
-        if self.use_pretrained:
+        if self.use_pretrained and \
+                (self.use_pretrained_net and use_pretrained_net) or \
+                (not self.use_pretrained_net and not use_pretrained_net):
             self._session.run(self.embedding_init,
                               feed_dict={self.embedding_placeholder:
                                          self.data.embedding_matrix})
-        self.train_writer = \
-            tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN,
-                                  self._session.graph)
-        self.valid_writer = \
-            tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
 
         old_epoch = 0
 
@@ -210,7 +207,7 @@ class Model(object):
             self.validate()
 
         # Train for a specified amount of epochs
-        for i in self.data.for_n_train_epochs(self.batch_size, self.training_epochs):
+        for i in self.data.for_n_train_epochs(self.training_epochs, self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
 
