@@ -178,6 +178,7 @@ class Model(object):
                 epoch, get_val_summary_tensor(val_prec), get_val_summary_tensor(train_prec), \
                 get_val_summary_tensor(val_recall), get_val_summary_tensor(train_recall)
 
+    # Currently not used. Saving for now. Might come in handy later
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
         with tf.device("/cpu:0"):
@@ -213,14 +214,12 @@ class Model(object):
             epoch = self.data.completed_training_epochs
 
             if not use_pretrained_net:
-                training_error = self.train_batch()
-                validation_error = self.validate_batch()
+                self.train_batch()
 
-                # Don't validate so often
+                # Don't print so often
                 if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
                     done = self.data.percent_of_epoch
-                    print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}"
-                          .format(validation_error, training_error, done))
+                    print("Epoch comletion: {:.0%}".format(done))
             else:
                 self.train_batch(True)
 
@@ -258,10 +257,6 @@ class Model(object):
                                self.subreddit_input: batch_sub,
                                self.target: batch_label})
 
-            return self._session.run(self.error,
-                                     feed_dict={self.input: batch_input,
-                                                self.subreddit_input: batch_sub,
-                                                self.target: batch_label})
     def close_writers(self):
         """ Close tensorboard writers """
         self.train_writer.close()
