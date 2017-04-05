@@ -8,9 +8,9 @@ network:
     vocabulary_size: 10000
     user_count: 6
     max_title_length: 30
-    validation_data: 'validation_data_top_n_single.csv'
-    training_data: 'training_data_top_n_single.csv'
-    testing_data: 'testing_data_top_n_single.csv'
+    validation_data: 'validation_data_top_5_subreddit_allvotes.csv'
+    training_data: 'training_data_top_5_subreddit_allvotes.csv'
+    testing_data: 'testing_data_top_5_subreddit_allvotes.csv'
     # Embedding matrix configs:
     embedding_size: 150 # Make sure to match pretrained matrix dimensions
     trainable_matrix: true
