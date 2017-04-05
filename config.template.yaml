@@ -20,7 +20,8 @@ network:
     learning_rate: 0.5
     training_epochs: 5
     batch_size: 25
-    lstm_neurons: 200
+    rnn_neurons: 200
+    rnn_unit: 'lstm' # Can be 'gru' or 'lstm', default: 'lstm'
     hidden_layers: 0
     hidden_neurons: 300
     use_concat_input: false

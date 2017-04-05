@@ -55,7 +55,13 @@ class ModelBuilder(object):
 
         self._model.keep_prob = tf.placeholder(tf.float64, name="keep_prob")
 
-        lstm_layer = tf.contrib.rnn.LSTMCell(self._model.lstm_neurons, state_is_tuple=True)
+        if self._model.rnn_unit == 'lstm':
+            rnn_layer = tf.contrib.rnn.LSTMCell(self._model.rnn_neurons)
+        elif self._model.rnn_unit == 'gru':
+            rnn_layer = tf.contrib.rnn.GRUCell(self._model.rnn_neurons)
+        else:
+            print("Incorrect RNN unit, defaulting to LSTM")
+            rnn_layer = tf.contrib.rnn.LSTMCell(self._model.rnn_neurons)
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
@@ -76,7 +82,7 @@ class ModelBuilder(object):
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._model.input)
         # Run the LSTM layer with the embedded input
-        outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
+        outputs, _ = tf.nn.dynamic_rnn(rnn_layer, embedded_input,
                                        dtype=tf.float64)
 
         outputs = tf.transpose(outputs, [1, 0, 2])
