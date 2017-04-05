@@ -37,7 +37,6 @@ class Data(object):
         self._current_test_index = 0
         self._current_pre_train_index = 0
         self.completed_training_epochs = 0
-        self.completed_pre_training_epochs = 0
         self.percent_of_epoch = 0.0
         self.subreddit_count = 0
         self.title_length = networkconfig['max_title_length']
@@ -59,10 +58,6 @@ class Data(object):
 
     def _read_data(self):
         """ Reads all the data from specified path """
-        logging.debug("Reading pre-training data...")
-
-        # self.pre_train_data, self.pre_train_labels = self.reader.get_data(Dataenum.TRAINING, label_column=1)
-        # self.pre_train_size = len(self.pre_train_data)
 
         logging.debug("Reading training data...")
 
@@ -152,9 +147,6 @@ class Data(object):
             # Support multiple epochs
             if self._current_pre_train_index >= self.train_size:
                 self._current_pre_train_index = 0
-                self.completed_pre_training_epochs += 1
-                self.percent_of_epoch = 0.0
-            # TODO Detta ska inte ligga i funktionen som generar ny data
 
             # Turn sentences and labels into vector representations
             sentence_vec, present, absent = \
@@ -170,7 +162,6 @@ class Data(object):
             batch_x.append(sentence_vec)
             batch_y.append(label_vec)
 
-        self.percent_of_epoch = self._current_train_index / self.train_size
         return batch_x, batch_y
 
     def get_validation(self):

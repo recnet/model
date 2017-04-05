@@ -229,8 +229,7 @@ class Model(object):
                 self._session.run(self.epoch.assign_add(1))
                 print("Epoch complete...old ", old_epoch)
                 self.save_checkpoint()
-                if not use_pretrained_net:
-                    self.validate()
+                self.validate()
             old_epoch = epoch
 
         # Save model when done training
