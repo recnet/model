@@ -144,31 +144,37 @@ class ModelBuilder(object):
 
         return self
 
-    def add_output_layer(self):
+    def add_output_layer(self, output_size, secondary_output=False):
         """Adds an output layer, including error and optimisation functions.
            After this method no new layers should be added."""
 
         # Output layer
         # Feed the output of the previous layer to a sigmoid layer
         sigmoid_weights = tf.Variable(tf.random_normal(
-            [self._model.latest_layer.get_shape()[1].value, self._model.user_count],
+            [self._model.latest_layer.get_shape()[1].value, output_size],
             stddev=0.35,
             dtype=tf.float64),
                                       name="output_weights")
 
-        sigmoid_bias = tf.Variable(tf.random_normal([self._model.user_count],
+        sigmoid_bias = tf.Variable(tf.random_normal([output_size],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
                                    name="output_biases")
 
         logits = tf.add(tf.matmul(self._model.latest_layer, sigmoid_weights), sigmoid_bias)
-        self._model.sigmoid = tf.nn.sigmoid(logits)
+
+        if secondary_output:
+            error = tf.nn.softmax_cross_entropy_with_logits(
+                                                labels=self._model.sec_target,
+                                                logits=logits)
+        else:
+            self._model.sigmoid = tf.nn.sigmoid(logits)
+            # Defne error function
+            error = tf.nn.sigmoid_cross_entropy_with_logits(
+                labels=self._model.target,
+                logits=logits)
 
         # Training
-
-        # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._model.target,
-                                                        logits=logits)
 
         if self._model.use_l2_loss:
             cross_entropy = \
@@ -183,53 +189,14 @@ class ModelBuilder(object):
         else:
             cross_entropy = tf.reduce_mean(error)
 
-        self._model.error = cross_entropy
-        self._model.train_op = tf.train.AdamOptimizer(
-            self._model.learning_rate).minimize(cross_entropy)
-
-        return self
-
-    def add_secondary_output(self):
-        """Adds a layer that can be used to train the network on data that is
-           labeled in a different way than the final data"""
-        # Output layer
-        # Feed the output of the previous layer to a sigmoid layer
-        sigmoid_weights = tf.Variable(tf.random_normal(
-            [self._model.latest_layer.get_shape()[1].value,
-             self._model.subreddit_count],
-            stddev=0.35,
-            dtype=tf.float64),
-            name="secondary_output_weights")
-
-        sigmoid_bias = tf.Variable(tf.random_normal([self._model.subreddit_count],
-                                                    stddev=0.35,
-                                                    dtype=tf.float64),
-                                   name="secondary_output_biases")
-
-        logits = tf.add(tf.matmul(self._model.latest_layer, sigmoid_weights),
-                        sigmoid_bias)
-        # Training
-
-        # Defne error function
-        error = tf.nn.softmax_cross_entropy_with_logits(
-            labels=self._model.sec_target,
-            logits=logits)
-
-        if self._model.use_l2_loss:
-            cross_entropy = \
-                tf.reduce_mean(tf.add(
-                    tf.add(error,
-                           tf.multiply(self._model.l2_factor,
-                                       tf.nn.l2_loss(sigmoid_weights))),
-                    tf.add(tf.multiply(self._model.l2_factor,
-                                       tf.nn.l2_loss(sigmoid_bias)),
-                           tf.multiply(self._model.l2_factor,
-                                       self._model.l2_term))))
+        if secondary_output:
+            self._model.pre_train_op = tf.train.AdamOptimizer(
+                self._model.learning_rate).minimize(cross_entropy)
         else:
-            cross_entropy = tf.reduce_mean(error)
+            self._model.error = cross_entropy
+            self._model.train_op = tf.train.AdamOptimizer(
+                self._model.learning_rate).minimize(cross_entropy)
 
-        self._model.pre_train_op = tf.train.AdamOptimizer(
-            self._model.learning_rate).minimize(cross_entropy)
         return self
 
     def add_precision_operations(self):
@@ -341,8 +308,8 @@ class ModelBuilder(object):
             self.add_layer(self._model.hidden_neurons)
 
         if self._model.use_pretrained_net:
-            self.add_secondary_output()
+            self.add_output_layer(self._model.subreddit_count, secondary_output=True)
 
-        self.add_output_layer() \
+        self.add_output_layer(self._model.user_count) \
             .add_precision_operations()
         return self
