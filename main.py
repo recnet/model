@@ -45,8 +45,11 @@ def main():
             for _ in range(config_file[HIDDEN_LAYERS]):
                 builder.add_layer(config_file[HIDDEN_NEURONS])
 
+            if builder._model.use_pretrained_net:
+                builder.add_secondary_output()
+                builder.add_layer(config_file[HIDDEN_NEURONS])
+
             builder.add_output_layer()\
-                .add_secondary_output()\
                 .add_precision_operations()
 
             network_model = builder.build()
