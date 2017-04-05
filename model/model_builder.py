@@ -101,7 +101,7 @@ class ModelBuilder(object):
         if not self.added_layers:
             self.added_layers = True
             weights = tf.Variable(tf.random_normal(
-                [self._model.lstm_neurons +
+                [self._model.rnn_neurons +
                  (1 if self._model.use_concat_input else 0),
                  number_of_neurons],
                 stddev=0.35,
