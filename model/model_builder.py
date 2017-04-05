@@ -70,10 +70,10 @@ class ModelBuilder(object):
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
-            tf.constant(0.0,
-                        shape=[self._model.vocabulary_size,
-                               self._model.embedding_size],
-                        dtype=tf.float64),
+            tf.random_uniform(
+                [self._model.vocabulary_size,
+                 self._model.embedding_size],
+                -1.0, 1.0, dtype=tf.float64),
             trainable=self._model.is_trainable_matrix,
             name="embedding_matrix",
             dtype=tf.float64)
