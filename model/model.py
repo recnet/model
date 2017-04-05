@@ -188,11 +188,12 @@ class Model(object):
                                             self.subreddit_input: batch_sub,
                                             self.target: batch_label})
 
-    # TODO funktionen gör alldeles för mycket,
-    # dela upp utskrift, beräkning och träning
     def train(self, use_pretrained_net=False):
         """ Trains the model on the dataset """
-        print("Starting training...")
+        if use_pretrained_net:
+            print("Pre-training on subreddits...")
+        else:
+            print("Starting training...")
 
         if self.use_pretrained and \
                 (self.use_pretrained_net and use_pretrained_net) or \

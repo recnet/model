@@ -40,7 +40,7 @@ def main():
         with tf.Session() as sess:
             builder = ModelBuilder(config_file, sess)
 
-            network_model = builder.add_as_conf().build()
+            network_model = builder.build()
             if config_file[USE_PRETRAINED_NET]:
                 network_model.train(USE_PRETRAINED_NET)
             network_model.train()

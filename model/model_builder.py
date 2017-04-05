@@ -165,8 +165,8 @@ class ModelBuilder(object):
 
         if secondary_output:
             error = tf.nn.softmax_cross_entropy_with_logits(
-                                                labels=self._model.sec_target,
-                                                logits=logits)
+                labels=self._model.sec_target,
+                logits=logits)
         else:
             self._model.sigmoid = tf.nn.sigmoid(logits)
             # Defne error function
@@ -289,27 +289,30 @@ class ModelBuilder(object):
     def build(self):
         """Adds saver and init operation and returns the model"""
 
-        self._model.train_writer = \
-            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_TRAIN,
-                                  self._model._session.graph)
-        self._model.valid_writer = \
-            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_VALID)
-        self._model.init_op = tf.group(tf.global_variables_initializer(),
-                                       tf.local_variables_initializer())
-        self._model.saver = tf.train.Saver()
-        self._model.load_checkpoint()
-        return self._model
-
-    def add_as_conf(self):
+        # Add input layer
         self.add_input_layer()
 
         # Add a number of hidden layers
         for _ in range(self._model.hidden_layers):
             self.add_layer(self._model.hidden_neurons)
 
+        # Add output layer for pretraining, if used
         if self._model.use_pretrained_net:
             self.add_output_layer(self._model.subreddit_count, secondary_output=True)
 
+        # Add output layer for users
         self.add_output_layer(self._model.user_count) \
             .add_precision_operations()
-        return self
+
+        # Initialize
+        self._model.train_writer = \
+            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_TRAIN,
+                                  self._model._session.graph)
+        self._model.valid_writer = \
+            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_VALID)
+
+        self._model.init_op = tf.group(tf.global_variables_initializer(),
+                                       tf.local_variables_initializer())
+        self._model.saver = tf.train.Saver()
+        self._model.load_checkpoint()
+        return self._model
