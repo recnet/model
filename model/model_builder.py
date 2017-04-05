@@ -332,3 +332,17 @@ class ModelBuilder(object):
         self._model.saver = tf.train.Saver()
         self._model.load_checkpoint()
         return self._model
+
+    def add_as_conf(self):
+        self.add_input_layer()
+
+        # Add a number of hidden layers
+        for _ in range(self._model.hidden_layers):
+            self.add_layer(self._model.hidden_neurons)
+
+        if self._model.use_pretrained_net:
+            self.add_secondary_output()
+
+        self.add_output_layer() \
+            .add_precision_operations()
+        return self

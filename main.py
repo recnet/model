@@ -39,20 +39,8 @@ def main():
         config_file = networkconfig[conf]
         with tf.Session() as sess:
             builder = ModelBuilder(config_file, sess)
-            builder.add_input_layer()
 
-            # Add a number of hidden layers
-            for _ in range(config_file[HIDDEN_LAYERS]):
-                builder.add_layer(config_file[HIDDEN_NEURONS])
-
-            if builder._model.use_pretrained_net:
-                builder.add_secondary_output()
-                builder.add_layer(config_file[HIDDEN_NEURONS])
-
-            builder.add_output_layer()\
-                .add_precision_operations()
-
-            network_model = builder.build()
+            network_model = builder.add_as_conf().build()
             if config_file[USE_PRETRAINED_NET]:
                 network_model.train(USE_PRETRAINED_NET)
             network_model.train()
