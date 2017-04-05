@@ -196,9 +196,7 @@ class Model(object):
         else:
             print("Starting training...")
 
-        if self.use_pretrained and \
-                (self.use_pretrained_net and use_pretrained_net) or \
-                (not self.use_pretrained_net and not use_pretrained_net):
+        if self.use_pretrained:
             self._session.run(self.embedding_init,
                               feed_dict={self.embedding_placeholder:
                                          self.data.embedding_matrix})
