@@ -205,7 +205,7 @@ class ModelBuilder(object):
         # Training
 
         # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(
+        error = tf.nn.softmax_cross_entropy_with_logits(
             labels=self._model.sec_target,
             logits=logits)
 
