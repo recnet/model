@@ -25,6 +25,7 @@ network:
     hidden_layers: 0
     hidden_neurons: 300
     use_concat_input: false
+    pre_train_subreddit: false
     # Regularisation configs:
     use_l2_loss: false
     l2_factor: 0.01

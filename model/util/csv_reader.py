@@ -35,7 +35,6 @@ class Dataenum(Enum):
     TRAINING = "training_data"
     VALIDATION = "validation_data"
 
-
 class CsvReader:
     def __init__(self, netcfg):
         self.netcfg = netcfg

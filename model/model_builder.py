@@ -24,6 +24,7 @@
 
 import tensorflow as tf
 from model.model import Model
+from definitions import *
 
 class ModelBuilder(object):
     """A class following the builder pattern to create a model"""
@@ -52,6 +53,10 @@ class ModelBuilder(object):
             tf.placeholder(tf.float64,
                            [None, self._model.user_count],
                            name="target")
+        self._model.sec_target = \
+            tf.placeholder(tf.float64,
+                           [None, self._model.data.subreddit_count],
+                           name="sec_target")
 
         self._model.keep_prob = tf.placeholder(tf.float64, name="keep_prob")
 
@@ -139,31 +144,37 @@ class ModelBuilder(object):
 
         return self
 
-    def add_output_layer(self):
+    def add_output_layer(self, output_size, secondary_output=False):
         """Adds an output layer, including error and optimisation functions.
            After this method no new layers should be added."""
 
         # Output layer
         # Feed the output of the previous layer to a sigmoid layer
         sigmoid_weights = tf.Variable(tf.random_normal(
-            [self._model.latest_layer.get_shape()[1].value, self._model.user_count],
+            [self._model.latest_layer.get_shape()[1].value, output_size],
             stddev=0.35,
             dtype=tf.float64),
                                       name="output_weights")
 
-        sigmoid_bias = tf.Variable(tf.random_normal([self._model.user_count],
+        sigmoid_bias = tf.Variable(tf.random_normal([output_size],
                                                     stddev=0.35,
                                                     dtype=tf.float64),
                                    name="output_biases")
 
         logits = tf.add(tf.matmul(self._model.latest_layer, sigmoid_weights), sigmoid_bias)
-        self._model.sigmoid = tf.nn.sigmoid(logits)
+
+        if secondary_output:
+            error = tf.nn.softmax_cross_entropy_with_logits(
+                labels=self._model.sec_target,
+                logits=logits)
+        else:
+            self._model.sigmoid = tf.nn.sigmoid(logits)
+            # Defne error function
+            error = tf.nn.sigmoid_cross_entropy_with_logits(
+                labels=self._model.target,
+                logits=logits)
 
         # Training
-
-        # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._model.target,
-                                                        logits=logits)
 
         if self._model.use_l2_loss:
             cross_entropy = \
@@ -178,9 +189,13 @@ class ModelBuilder(object):
         else:
             cross_entropy = tf.reduce_mean(error)
 
-        self._model.error = cross_entropy
-        self._model.train_op = tf.train.AdamOptimizer(
-            self._model.learning_rate).minimize(cross_entropy)
+        if secondary_output:
+            self._model.pre_train_op = tf.train.AdamOptimizer(
+                self._model.learning_rate).minimize(cross_entropy)
+        else:
+            self._model.error = cross_entropy
+            self._model.train_op = tf.train.AdamOptimizer(
+                self._model.learning_rate).minimize(cross_entropy)
 
         return self
 
@@ -273,15 +288,28 @@ class ModelBuilder(object):
 
     def build(self):
         """Adds saver and init operation and returns the model"""
+
+        # Add input layer
         self.add_input_layer()
 
         # Add a number of hidden layers
         for _ in range(self._model.hidden_layers):
             self.add_layer(self._model.hidden_neurons)
 
-        self.add_output_layer()
+        # Add output layer for pretraining, if used
+        if self._model.use_pretrained_net:
+            self.add_output_layer(self._model.subreddit_count, secondary_output=True)
 
-        self.add_precision_operations()
+        # Add output layer for users
+        self.add_output_layer(self._model.user_count) \
+            .add_precision_operations()
+
+        # Initialize
+        self._model.train_writer = \
+            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_TRAIN,
+                                  self._model._session.graph)
+        self._model.valid_writer = \
+            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_VALID)
 
         self._model.init_op = tf.group(tf.global_variables_initializer(),
                                        tf.local_variables_initializer())
