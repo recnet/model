@@ -151,9 +151,7 @@ class ModelBuilder(object):
             logits, name="hidden_layer-" + str(self.number_of_layers))
 
         if self._model.use_l2_loss:
-            self._model.l2_term = tf.add(
-                tf.add(self._model.l2_term, tf.nn.l2_loss(weights)),
-                tf.nn.l2_loss(bias))
+            self._model.l2_term = tf.add(self._model.l2_term, tf.nn.l2_loss(weights))
         if self._model.use_dropout:
             self._model.latest_layer = \
                 tf.nn.dropout(self._model.latest_layer,
