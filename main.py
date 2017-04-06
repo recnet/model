@@ -49,7 +49,7 @@ def main():
                 network_model.close_writers()
             tf.reset_default_graph()
         except:
-            print("Config ", config_file["name"], "failed to complete")
+            print("Config ", networkconfig[conf]["name"], "failed to complete")
 
 if __name__ == "__main__":
     main()
