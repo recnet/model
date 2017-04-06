@@ -24,6 +24,7 @@ network:
     rnn_unit: 'lstm' # Can be 'gru' or 'lstm', default: 'lstm'
     hidden_layers: 0
     hidden_neurons: 300
+    subreddit_input_neurons: 10 #Probebly not the best default value
     use_concat_input: false
     pre_train_subreddit: false
     # Regularisation configs:

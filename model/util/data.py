@@ -123,8 +123,9 @@ class Data(object):
             self.train_present += present
             self.train_absent += absent
 
-            subreddit_vec = helper.subreddit_index(subreddit,
-                                                   self.subreddit_dict)
+            subreddit_vec = helper.label_vector(subreddit,
+                                                self.subreddit_dict,
+                                                self.subreddit_count)
 
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)
@@ -198,8 +199,9 @@ class Data(object):
             self.valid_present += pres
             self.valid_absent += absent
 
-            subreddit_vec = helper.subreddit_index(subreddit,
-                                                   self.subreddit_dict)
+            subreddit_vec = helper.label_vector(subreddit,
+                                                self.subreddit_dict,
+                                                self.subreddit_count)
 
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)
@@ -238,8 +240,9 @@ class Data(object):
                                                self.word_dict,
                                                self.max_title_length)
 
-            subreddit_vec = helper.subreddit_index(subreddit,
-                                                   self.subreddit_dict)
+            subreddit_vec = helper.label_vector(subreddit,
+                                                self.subreddit_dict,
+                                                self.subreddit_count)
 
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)

@@ -47,7 +47,7 @@ class ModelBuilder(object):
                            name="input")
         self._model.subreddit_input = \
             tf.placeholder(tf.float64,
-                           [None, 1],
+                           [None, self._model.subreddit_count],
                            name="subreddit_input")
         self._model.target = \
             tf.placeholder(tf.float64,
@@ -94,7 +94,23 @@ class ModelBuilder(object):
         output = outputs[-1]
         if self._model.use_concat_input:
             # Add subreddit to end of input
-            output = tf.concat([output, self._model.subreddit_input], 1)
+            subreddit_weights = tf.Variable(tf.random_normal(
+                    [self._model.subreddit_count,
+                     self._model.subreddit_input_neurons],
+                    stddev=0.35,
+                    dtype=tf.float64),
+                name="sub_input_weights")
+
+            subreddit_bias = tf.Variable(tf.random_normal(
+                    [self._model.subreddit_input_neurons],
+                    stddev=0.35,
+                    dtype=tf.float64),
+                name="sub_input_bias")
+
+            logit_subreddit = tf.add(
+                tf.matmul(self._model.subreddit_input, subreddit_weights),
+                subreddit_bias)
+            output = tf.concat([output, logit_subreddit], 1)
 
         self._model.latest_layer = output
 
@@ -107,7 +123,9 @@ class ModelBuilder(object):
             self.added_layers = True
             weights = tf.Variable(tf.random_normal(
                 [self._model.rnn_neurons +
-                 (1 if self._model.use_concat_input else 0),
+                 (self._model.subreddit_input_neurons
+                  if self._model.use_concat_input
+                  else 0),
                  number_of_neurons],
                 stddev=0.35,
                 dtype=tf.float64),

@@ -63,6 +63,7 @@ class Model(object):
         self.dropout_prob = config[DROPOUT_PROB] # Only used for train op
         self.hidden_layers = config[HIDDEN_LAYERS]
         self.hidden_neurons = config[HIDDEN_NEURONS]
+        self.subreddit_input_neurons = config[SUB_INPUT_NEURONS]
         self.is_trainable_matrix = config[TRAINABLE_MATRIX]
         self.use_pretrained = config[USE_PRETRAINED]
         self.use_constant_limit = config[USE_CONSTANT_LIMIT]

@@ -44,6 +44,7 @@ RNN_NEURONS = 'rnn_neurons'
 RNN_UNIT = "rnn_unit"
 HIDDEN_NEURONS = 'hidden_neurons'
 HIDDEN_LAYERS = 'hidden_layers'
+SUB_INPUT_NEURONS = 'subreddit_input_neurons'
 USE_CONCAT_INPUT = 'use_concat_input'
 BATCH_SIZE = 'batch_size'
 TRAINING_EPOCHS = 'training_epochs'
