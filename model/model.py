@@ -53,7 +53,8 @@ class Model(object):
         self.learning_rate = config[LEARN_RATE]
         self.embedding_size = config[EMBEDD_SIZE]
         self.max_title_length = config[MAX_TITLE_LENGTH]
-        self.lstm_neurons = config[LSTM_NEURONS]
+        self.rnn_neurons = config[RNN_NEURONS]
+        self.rnn_unit = config[RNN_UNIT]
         self.batch_size = config[BATCH_SIZE]
         self.training_epochs = config[TRAINING_EPOCHS]
         self.use_l2_loss = config[USE_L2_LOSS]
@@ -67,13 +68,17 @@ class Model(object):
         self.use_constant_limit = config[USE_CONSTANT_LIMIT]
         self.constant_prediction_limit = config[CONSTANT_PREDICTION_LIMIT]
         self.use_concat_input = config[USE_CONCAT_INPUT]
+        self.use_pretrained_net = config[USE_PRETRAINED_NET]
+        self.subreddit_count = 0
 
         # Will be set in build_graph
         self.input = None
         self.subreddit_input = None
         self.target = None
+        self.sec_target = None
         self.sigmoid = None
         self.train_op = None
+        self.pre_train_op = None
         self.error = None
         self.init_op = None
         self.saver = None
@@ -105,6 +110,7 @@ class Model(object):
 
         with tf.device("/cpu:0"):
             self.data = data.Data(config)
+            self.subreddit_count = self.data.subreddit_count
             if self.use_pretrained:
                 self.vocabulary_size = len(self.data.embedding_matrix)
 
@@ -172,6 +178,7 @@ class Model(object):
                 epoch, get_val_summary_tensor(val_prec), get_val_summary_tensor(train_prec), \
                 get_val_summary_tensor(val_recall), get_val_summary_tensor(train_recall)
 
+    # Currently not used. Saving for now. Might come in handy later
     def validate_batch(self):
         """ Validates a batch of data and returns cross entropy error """
         with tf.device("/cpu:0"):
@@ -182,40 +189,37 @@ class Model(object):
                                             self.subreddit_input: batch_sub,
                                             self.target: batch_label})
 
-    # TODO funktionen gör alldeles för mycket,
-    # dela upp utskrift, beräkning och träning
-    def train(self):
+    def train(self, use_pretrained_net=False):
         """ Trains the model on the dataset """
-        print("Starting training...")
+        if use_pretrained_net:
+            print("Pre-training on subreddits...")
+        else:
+            print("Starting training...")
 
         if self.use_pretrained:
             self._session.run(self.embedding_init,
                               feed_dict={self.embedding_placeholder:
                                          self.data.embedding_matrix})
-        self.train_writer = \
-            tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_TRAIN,
-                                  self._session.graph)
-        self.valid_writer = \
-            tf.summary.FileWriter(self.logging_dir + '/' + TENSOR_DIR_VALID)
 
         old_epoch = 0
 
-        if self.epoch.eval(self._session) == 0:
+        if self.epoch.eval(self._session) == 0 and not use_pretrained_net:
             self.validate()
 
         # Train for a specified amount of epochs
-        for i in self.data.for_n_train_epochs(self.training_epochs,
-                                              self.batch_size):
+        for i in self.data.for_n_train_epochs(self.training_epochs, self.batch_size):
             # Debug print out
             epoch = self.data.completed_training_epochs
-            training_error = self.train_batch()
-            validation_error = self.validate_batch()
 
-            # Don't validate so often
-            if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
-                done = self.data.percent_of_epoch
-                print("Validation error: {:f} | Training error: {:f} | Done: {:.0%}"
-                      .format(validation_error, training_error, done))
+            if not use_pretrained_net:
+                self.train_batch()
+
+                # Don't print so often
+                if i % (self.data.train_size // self.batch_size // 10) == 0 and i:
+                    done = self.data.percent_of_epoch
+                    print("Epoch comletion: {:.0%}".format(done))
+            else:
+                self.train_batch(True)
 
             # Do a full evaluation once an epoch is complete
             if epoch != old_epoch:
@@ -231,21 +235,26 @@ class Model(object):
                      epoch_top=self.epoch_top, prec_valid=self.prec_valid, prec_train=self.prec_train,
                      recall_valid=self.recall_valid, recall_train=self.recall_train)
 
-    def train_batch(self):
+    def train_batch(self, pre_train_net=False):
         """ Trains for one batch and returns cross entropy error """
         with tf.device("/cpu:0"):
-            batch_input, batch_sub, batch_label = \
-                self.data.next_train_batch()
+            if not pre_train_net:
+                batch_input, batch_sub, batch_label = \
+                    self.data.next_train_batch()
+            else:
+                batch_input, batch_label = \
+                    self.data.next_pre_train_batch()
 
-        self._session.run(self.train_op,
-                          {self.input: batch_input,
-                           self.subreddit_input: batch_sub,
-                           self.target: batch_label})
+        if pre_train_net:
+            self._session.run(self.pre_train_op,
+                              {self.input: batch_input,
+                               self.sec_target: batch_label})
+        else:
+            self._session.run(self.train_op,
+                              {self.input: batch_input,
+                               self.subreddit_input: batch_sub,
+                               self.target: batch_label})
 
-        return self._session.run(self.error,
-                                 feed_dict={self.input: batch_input,
-                                            self.subreddit_input: batch_sub,
-                                            self.target: batch_label})
     def close_writers(self):
         """ Close tensorboard writers """
         self.train_writer.close()

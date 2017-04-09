@@ -23,6 +23,7 @@
 # ==============================================================================
 import argparse
 import tensorflow as tf
+from definitions import *
 from model.util.networkconfig import yamlconfig as networkconfig
 from model.model_builder import ModelBuilder
 
@@ -38,7 +39,10 @@ def main():
         config_file = networkconfig[conf]
         with tf.Session() as sess:
             builder = ModelBuilder(config_file, sess)
+
             network_model = builder.build()
+            if config_file[USE_PRETRAINED_NET]:
+                network_model.train(USE_PRETRAINED_NET)
             network_model.train()
             network_model.close_writers()
         tf.reset_default_graph()
