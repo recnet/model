@@ -1,3 +1,5 @@
+from random import choice
+
 template = """   -type: {0}
     name: {1}
     # Data related configs:
@@ -40,91 +42,107 @@ def name():
         x+=1
 
 def vocabulary_size():
-    pass
+    possibilites = ["10000","12000","15000","17000","19000"]
+    return choice(possibilites)
 
 def user_count():
-    return input("Enter number of users > ")
+    pass
 
 def max_title_length():
+    possibilites = ["20","25","30","35","40"]
+    return choice(possibilites)
+
+def validation_data(nbr_of_users):
     pass
 
-def validation_data():
+def training_data(nbr_of_users):
     pass
 
-def training_data():
-    pass
-
-def testing_data():
+def testing_data(nbr_of_users):
     pass
 
 def embedding_size():
-    pass
+    return choice("100","150","300")
 
 def trainable_matrix():
-    pass
+    return choice(["true","false"])
 
 def use_pretrained():
-    pass
+    return choice(["true","false"])
 
-def pre_trained_matrix():
-    pass
+def pre_trained_matrix(dim):
+    if dim == "100":
+        return "vectors.txt"
+    elif dim == "150":
+        return "vectors150d.txt"
+    elif dim == "300":
+        return "vectors300d.txt"
 
 def learning_rate():
-    pass
+    possibilites = ["0.15","0.2","0.3","0.35","0.4","0.5"]
+    return choice(possibilites)
 
 def training_epochs():
-    pass
+    possibilites = ["5","6","7","8","9"]
+    return choice(possibilites)
 
 def batch_size():
-    pass
+    possibilites = ["20","25","30","35","40"]
+    return choice(possibilites)
 
 def lstm_neurons():
-    pass
+    possibilites = ["100","150","175","200","250","300"]
+    return choice(possibilites)
 
 def hidden_layers():
-    pass
+    return choice(["1","2","3","4","5"])
 
 def hidden_neurons():
-    pass
+    possibilites = ["150","200","250","300","350"]
+    return choice(possibilites)
 
 def use_concat_input():
-    pass
+    return choice(["true","false"])
 
 def use_l2_loss():
-    pass
+    return choice(["true","false"])
 
 def l2_factor():
-    pass
+    possibilites = []
+    return choice(possibilites)
 
 def use_dropout():
-    pass
+    return choice(["true","false"])
 
 def dropout_prob():
-    pass
+    possibilites = ["0.65","0.70","0.75","0.80"]
+    return choice(possibilites)
 
 def use_constant_limit():
-    pass
+    return choice(["true","false"])
 
 def constant_prediction_limit():
-    pass
+    possibilites = ["0.25","0.3","0.35","0.40"]
+    return choice(possibilites)
 
 
 name_generator = name()
-users  = user_count()
 
 def get_random_config():
+    embed_size = embedding_size()
+    nbr_of_users = user_count()
     config = template.format(rtype(),
                          name_generator.__next__(),
                          vocabulary_size(),
-                         users,
+                         nbr_of_users,
                          max_title_length(),
-                         validation_data(),
-                         training_data(),
-                         testing_data(),
+                         validation_data(nbr_of_users),
+                         training_data(nbr_of_users),
+                         testing_data(nbr_of_users),
                          embedding_size(),
                          trainable_matrix(),
                          use_pretrained(),
-                         pre_trained_matrix(),
+                         pre_trained_matrix(embed_size),
                          learning_rate(),
                          training_epochs(),
                          batch_size(),
