@@ -18,18 +18,21 @@ template = """   -type: {0}
     learning_rate: {12}
     training_epochs: {13}
     batch_size: {14}
-    lstm_neurons: {15}
-    hidden_layers: {16}
-    hidden_neurons: {17}
-    use_concat_input: {18}
+    rnn_neurons: {15}
+    rnn_unit: '{16}' # Can be 'gru' or 'lstm', default: 'lstm'
+    hidden_layers: {17}
+    hidden_neurons: {18}
+    subreddit_input_neurons: {19}
+    use_concat_input: {20}
+    pre_train_subreddit: {21}
     # Regularisation configs:
-    use_l2_loss: {19}
-    l2_factor: {20}
-    use_dropout: {21}
-    dropout_prob: {22}
+    use_l2_loss: {22}
+    l2_factor: {23}
+    use_dropout: {24}
+    dropout_prob: {25}
     # Validation configs:
-    use_constant_limit: {23}
-    constant_prediction_limit: {24}"""
+    use_constant_limit: {26}
+    constant_prediction_limit: {27}"""
 
 def rtype():
     return "model-builder"
@@ -106,6 +109,15 @@ def lstm_neurons():
     possibilites = ["100","150","200","250","300"]
     return choice(possibilites)
 
+def rnn_unit():
+    return choice(["gru","lstm"])
+
+def subreddit_input_neurons():
+    return choice(["50", "100", "200"])
+
+def use_pretrain_subreddit():
+    return choice(["true", "false"])
+
 def hidden_layers():
     return choice(["1","2","3","4","5"])
 
@@ -160,9 +172,12 @@ def get_random_config():
                          training_epochs(),
                          batch_size(),
                          lstm_neurons(),
+                         rnn_unit(),
                          hidden_layers(),
                          hidden_neurons(),
+                         subreddit_input_neurons(),
                          use_concat_input(),
+                         use_pretrain_subreddit(),
                          use_l2_loss(),
                          l2_factor(),
                          use_dropout(),
