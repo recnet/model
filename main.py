@@ -36,16 +36,20 @@ def main():
     args = parser.parse_args()
 
     for conf in args.configs:
-        config_file = networkconfig[conf]
-        with tf.Session() as sess:
-            builder = ModelBuilder(config_file, sess)
+        try:
+            print("Starting config ", conf)
+            config_file = networkconfig[conf]
+            with tf.Session() as sess:
+                builder = ModelBuilder(config_file, sess)
 
-            network_model = builder.build()
-            if config_file[USE_PRETRAINED_NET]:
-                network_model.train(USE_PRETRAINED_NET)
-            network_model.train()
-            network_model.close_writers()
-        tf.reset_default_graph()
+                network_model = builder.build()
+                if config_file[USE_PRETRAINED_NET]:
+                    network_model.train(USE_PRETRAINED_NET)
+                network_model.train()
+                network_model.close_writers()
+            tf.reset_default_graph()
+        except:
+            print("Config ", networkconfig[conf]["name"], "failed to complete")
 
 if __name__ == "__main__":
     main()
