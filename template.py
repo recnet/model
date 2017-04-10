@@ -127,7 +127,7 @@ def use_dropout():
     return choice(["true","false"])
 
 def dropout_prob():
-    possibilites = ["0.65","0.70","0.75","0.80"]
+    possibilites = ["0.5", "0.75", "0.9"]
     return choice(possibilites)
 
 def use_constant_limit():
