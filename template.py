@@ -99,7 +99,7 @@ def training_epochs():
     return choice(["50"])
 
 def batch_size():
-    possibilites = ["20","25","30","35","40"]
+    possibilites = ["25", "50", "100"]
     return choice(possibilites)
 
 def lstm_neurons():
