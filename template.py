@@ -55,10 +55,7 @@ def max_title_length():
 def data_set(nbr_of_users):
     possibilites_5_users = [("validation_data_top_5_subreddit_allvotes.csv"
                             ,"training_data_top_5_subreddit_allvotes.csv"
-                            ,"testing_data_top_5_subreddit_allvotes.csv"),
-                            ("validation_data_top_n.csv",
-                             "training_data_top_n.csv",
-                             "testing_data_top_n.csv")
+                            ,"testing_data_top_5_subreddit_allvotes.csv")
                            ]
     possibilites_50_users = [("validation_data_top_50_subreddit_allvotes.csv"
                             ,"training_data_top_50_subreddit_allvotes.csv"
