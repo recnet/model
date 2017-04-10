@@ -134,7 +134,7 @@ def use_constant_limit():
     return choice(["true","false"])
 
 def constant_prediction_limit():
-    possibilites = ["0.25","0.3","0.35","0.40"]
+    possibilites = ["0.2","0.3","0.4","0.5", "0.6", "0.7", "0.8"]
     return choice(possibilites)
 
 
