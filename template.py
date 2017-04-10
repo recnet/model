@@ -132,7 +132,7 @@ def use_l2_loss():
     return choice(["true","false"])
 
 def l2_factor():
-    possibilites = ["0.01"]
+    possibilites = ["0.01", "0.05", "0.1"]
     return choice(possibilites)
 
 def use_dropout():
