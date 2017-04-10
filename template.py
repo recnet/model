@@ -110,7 +110,7 @@ def hidden_layers():
     return choice(["1","2","3","4","5"])
 
 def hidden_neurons():
-    possibilites = ["150","200","250","300","350"]
+    possibilites = ["150","300","450","600","750"]
     return choice(possibilites)
 
 def use_concat_input():
