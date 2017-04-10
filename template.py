@@ -46,7 +46,7 @@ def vocabulary_size():
     return choice(possibilites)
 
 def user_count():
-    return choice(["50","5"])
+    return choice(["51","6"])
 
 def max_title_length():
     possibilites = ["20","25","30","35","40"]
@@ -71,9 +71,9 @@ def data_set(nbr_of_users):
     val = None
     train = None
     test = None
-    if nbr_of_users == "5":
+    if nbr_of_users == "6":
         val,train,test = choice(possibilites_5_users)
-    elif nbr_of_users == "50":
+    elif nbr_of_users == "51":
         val,train,test = choice(possibilites_50_users)
     return val,train,test
 
