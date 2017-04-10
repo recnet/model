@@ -103,7 +103,7 @@ def batch_size():
     return choice(possibilites)
 
 def lstm_neurons():
-    possibilites = ["100","150","175","200","250","300"]
+    possibilites = ["100","150","200","250","300"]
     return choice(possibilites)
 
 def hidden_layers():
