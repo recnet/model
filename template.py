@@ -155,7 +155,7 @@ def get_random_config():
                          val,
                          train,
                          test,
-                         embedding_size(),
+                         embed_size,
                          trainable_matrix(),
                          use_pretrained(),
                          pre_trained_matrix(embed_size),
