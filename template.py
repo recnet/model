@@ -56,9 +56,6 @@ def data_set(nbr_of_users):
     possibilites_5_users = [("validation_data_top_5_subreddit_allvotes.csv"
                             ,"training_data_top_5_subreddit_allvotes.csv"
                             ,"testing_data_top_5_subreddit_allvotes.csv"),
-                            ("validation_data_top_5_subreddit_allvotes_binarycontent.csv",
-                             "training_data_top_5_subreddit_allvotes_binarycontent.csv",
-                             "testing_data_top_5_subreddit_allvotes_binarycontent.csv"),
                             ("validation_data_top_n.csv",
                              "training_data_top_n.csv",
                              "testing_data_top_n.csv")
@@ -66,9 +63,6 @@ def data_set(nbr_of_users):
     possibilites_50_users = [("validation_data_top_50_subreddit_allvotes.csv"
                             ,"training_data_top_50_subreddit_allvotes.csv"
                             ,"testing_data_top_50_subreddit_allvotes.csv"),
-                            ("validation_data_top_50_subreddit_allvotes_binarycontent.csv",
-                             "training_data_top_50_subreddit_allvotes_binarycontent.csv",
-                             "testing_data_top_50_subreddit_allvotes_binarycontent.csv"),
                              ("validation_data_top_50_subreddit.csv",
                               "training_data_top_50_subreddit.csv",
                               "testing_data_top_50_subreddit.csv")
@@ -101,7 +95,7 @@ def pre_trained_matrix(dim):
         return "vectors300d.txt"
 
 def learning_rate():
-    possibilites = ["0.15","0.2","0.3","0.35","0.4","0.5"]
+    possibilites = ["0.05", "0.1", "0.15","0.2","0.3","0.35","0.4","0.5"]
     return choice(possibilites)
 
 def training_epochs():
