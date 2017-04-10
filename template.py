@@ -6,14 +6,14 @@ template = """   -type: {0}
     vocabulary_size: {2}
     user_count: {3}
     max_title_length: {4}
-    validation_data: {5}
-    training_data: {6}
-    testing_data: {7}
+    validation_data: '{5}'
+    training_data: '{6}'
+    testing_data: '{7}'
     # Embedding matrix configs:
     embedding_size: {8} # Make sure to match pretrained matrix dimensions
     trainable_matrix: {9}
     use_pretrained: {10}
-    pre_trained_matrix: {11}
+    pre_trained_matrix: '{11}'
     # Learning configs:
     learning_rate: {12}
     training_epochs: {13}
@@ -46,23 +46,45 @@ def vocabulary_size():
     return choice(possibilites)
 
 def user_count():
-    pass
+    return choice(["50","5"])
 
 def max_title_length():
     possibilites = ["20","25","30","35","40"]
     return choice(possibilites)
 
-def validation_data(nbr_of_users):
-    pass
+def data_set(nbr_of_users):
+    possibilites_5_users = [("validation_data_top_5_subreddit_allvotes.csv"
+                            ,"training_data_top_5_subreddit_allvotes.csv"
+                            ,"testing_data_top_5_subreddit_allvotes.csv"),
+                            ("validation_data_top_5_subreddit_allvotes_binarycontent.csv",
+                             "training_data_top_5_subreddit_allvotes_binarycontent.csv",
+                             "testing_data_top_5_subreddit_allvotes_binarycontent.csv"),
+                            ("validation_data_top_n.csv",
+                             "training_data_top_n.csv",
+                             "testing_data_top_n.csv")
+                           ]
+    possibilites_50_users = [("validation_data_top_50_subreddit_allvotes.csv"
+                            ,"training_data_top_50_subreddit_allvotes.csv"
+                            ,"testing_data_top_50_subreddit_allvotes.csv"),
+                            ("validation_data_top_50_subreddit_allvotes_binarycontent.csv",
+                             "training_data_top_50_subreddit_allvotes_binarycontent.csv",
+                             "testing_data_top_50_subreddit_allvotes_binarycontent.csv"),
+                             ("validation_data_top_50_subreddit.csv",
+                              "training_data_top_50_subreddit.csv",
+                              "testing_data_top_50_subreddit.csv")
+                            ]
 
-def training_data(nbr_of_users):
-    pass
-
-def testing_data(nbr_of_users):
-    pass
+    val = None
+    train = None
+    test = None
+    if nbr_of_users == "5":
+        val,train,test = choice(possibilites_5_users)
+    elif nbr_of_users == "50":
+        val,train,test = choice(possibilites_50_users)
+    return val,train,test
 
 def embedding_size():
-    return choice("100","150","300")
+    return choice(["100","150","300"])
 
 def trainable_matrix():
     return choice(["true","false"])
@@ -83,8 +105,7 @@ def learning_rate():
     return choice(possibilites)
 
 def training_epochs():
-    possibilites = ["5","6","7","8","9"]
-    return choice(possibilites)
+    return choice(["50"])
 
 def batch_size():
     possibilites = ["20","25","30","35","40"]
@@ -108,7 +129,7 @@ def use_l2_loss():
     return choice(["true","false"])
 
 def l2_factor():
-    possibilites = []
+    possibilites = ["0.01"]
     return choice(possibilites)
 
 def use_dropout():
@@ -131,14 +152,15 @@ name_generator = name()
 def get_random_config():
     embed_size = embedding_size()
     nbr_of_users = user_count()
+    val,train,test = data_set(nbr_of_users)
     config = template.format(rtype(),
                          name_generator.__next__(),
                          vocabulary_size(),
                          nbr_of_users,
                          max_title_length(),
-                         validation_data(nbr_of_users),
-                         training_data(nbr_of_users),
-                         testing_data(nbr_of_users),
+                         val,
+                         train,
+                         test,
                          embedding_size(),
                          trainable_matrix(),
                          use_pretrained(),
