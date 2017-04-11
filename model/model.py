@@ -223,7 +223,7 @@ class Model(object):
                 self.train_batch(True)
 
             # Do a full evaluation once an epoch is complete
-            if epoch != old_epoch:
+            if epoch != old_epoch and not use_pretrained_net:
                 self._session.run(self.epoch.assign_add(1))
                 print("Epoch complete...old ", old_epoch)
                 self.save_checkpoint()
@@ -232,9 +232,10 @@ class Model(object):
 
         # Save model when done training
         self.save_checkpoint()
-        log_samefile(config=self.config, f1_score_valid=self.f1_score_valid, f1_score_train=self.f1_score_train,
-                     epoch_top=self.epoch_top, prec_valid=self.prec_valid, prec_train=self.prec_train,
-                     recall_valid=self.recall_valid, recall_train=self.recall_train)
+        if not use_pretrained_net:
+            log_samefile(config=self.config, f1_score_valid=self.f1_score_valid, f1_score_train=self.f1_score_train,
+                         epoch_top=self.epoch_top, prec_valid=self.prec_valid, prec_train=self.prec_train,
+                         recall_valid=self.recall_valid, recall_train=self.recall_train)
 
     def train_batch(self, pre_train_net=False):
         """ Trains for one batch and returns cross entropy error """
