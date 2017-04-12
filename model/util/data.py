@@ -160,14 +160,11 @@ class Data(object):
             self.train_present += present
             self.train_absent += absent
 
-            label_vec = helper.label_vector(label,
-                                            self.subreddit_dict,
-                                            self.subreddit_count)
             subreddit_vec = helper.label_vector(subreddit,
                                                 self.subreddit_dict,
                                                 self.subreddit_count)
             batch_x.append(sentence_vec)
-            batch_y.append(label_vec)
+            batch_y.append(subreddit_vec)
             batch_sub.append(subreddit_vec)
 
 
