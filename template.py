@@ -1,6 +1,6 @@
 from random import choice
 
-template = """   -type: {0}
+template = """  - type: {0}
     name: {1}
     # Data related configs:
     vocabulary_size: {2}
