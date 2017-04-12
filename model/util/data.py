@@ -141,9 +141,12 @@ class Data(object):
         batch_size = batch_size or self.batch_size
         batch_x = []
         batch_y = []
+        batch_sub = []
+
         for _ in range(0, batch_size):
-            sentence = self.train_data[self._current_train_index]
-            label = self.train_labels[self._current_train_index]
+            sentence = self.train_data[self._current_pre_train_index]
+            subreddit = self.train_subreddits[self._current_pre_train_index]
+            label = self.train_labels[self._current_pre_train_index]
             self._current_pre_train_index += 1
             # Support multiple epochs
             if self._current_pre_train_index >= self.train_size:
@@ -160,10 +163,15 @@ class Data(object):
             label_vec = helper.label_vector(label,
                                             self.subreddit_dict,
                                             self.subreddit_count)
+            subreddit_vec = helper.label_vector(subreddit,
+                                                self.subreddit_dict,
+                                                self.subreddit_count)
             batch_x.append(sentence_vec)
             batch_y.append(label_vec)
+            batch_sub.append(subreddit_vec)
 
-        return batch_x, batch_y
+
+        return batch_x, batch_sub, batch_y
 
     def get_validation(self):
         """ Get the whole validation set in a vectorized form """

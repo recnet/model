@@ -244,10 +244,15 @@ class Model(object):
                 batch_input, batch_sub, batch_label = \
                     self.data.next_train_batch()
             else:
-                batch_input, batch_label = \
+                batch_input, batch_sub, batch_label = \
                     self.data.next_pre_train_batch()
 
-        if pre_train_net:
+        if pre_train_net and self.use_concat_input:
+            self._session.run(self.pre_train_op,
+                              {self.input: batch_input,
+                               self.subreddit_input: batch_sub,
+                               self.sec_target: batch_label})
+        elif pre_train_net:
             self._session.run(self.pre_train_op,
                               {self.input: batch_input,
                                self.sec_target: batch_label})
