@@ -106,7 +106,7 @@ def batch_size():
     return choice(possibilites)
 
 def lstm_neurons():
-    possibilites = ["100","150","200","250","300"]
+    possibilites = ["150","200","250","300","400"]
     return choice(possibilites)
 
 def rnn_unit():
@@ -119,7 +119,7 @@ def use_pretrain_subreddit():
     return choice(["true", "false"])
 
 def hidden_layers():
-    return choice(["1","2","3","4","5"])
+    return choice(["0","1","2","3","4","5"])
 
 def hidden_neurons():
     possibilites = ["150","300","450","600","750"]
