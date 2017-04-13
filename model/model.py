@@ -46,7 +46,7 @@ class Model(object):
         self.latest_layer = None
         self.output_weights = None
         self.output_bias = None
-        self.l2_term = tf.constant(0, dtype=tf.float64)
+        self.l2_term = tf.constant(0, dtype=tf.float32)
 
         self.vocabulary_size = config[VOC_SIZE]
         self.user_count = config[USER_COUNT]
