@@ -21,6 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 # ==============================================================================
+import sys
 import argparse
 import tensorflow as tf
 from definitions import *
@@ -31,11 +32,10 @@ def main():
     """ A main method that creates the model and starts training it """
     # Parse arguments
     parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument('configs', metavar='C', type=int, nargs='+',
+    parser.add_argument('configs', metavar='C', type=int, nargs='*',
                         help='Config number to use (can be multiple)')
     args = parser.parse_args()
-
-    for conf in args.configs:
+    for conf in args.configs if args.configs else range(len(networkconfig)):
         try:
             print("Starting config ", conf)
             config_file = networkconfig[conf]
@@ -48,8 +48,9 @@ def main():
                 network_model.train()
                 network_model.close_writers()
             tf.reset_default_graph()
-        except:
-            print("Config ", networkconfig[conf]["name"], "failed to complete")
+        except Exception as e:
+            print("Config ", networkconfig[conf]["name"], "failed to complete", file=sys.stderr)
+            print(e, file=sys.stderr)
 
 if __name__ == "__main__":
     main()
