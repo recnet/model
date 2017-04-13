@@ -1,4 +1,5 @@
 from random import choice
+from datetime import datetime
 
 template = """  - type: {0}
     name: {1}
@@ -32,13 +33,13 @@ template = """  - type: {0}
     dropout_prob: {25}
     # Validation configs:
     use_constant_limit: {26}
-    constant_prediction_limit: {27}"""
+    constant_prediction_limit: {27}\n"""
 
 def rtype():
     return "model-builder"
 
 def name():
-    name = "network"
+    name = "network-" + str(datetime.now()) + "-"
     x = 0
     while True:
         yield name + str(x)
