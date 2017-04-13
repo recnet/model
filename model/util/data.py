@@ -86,7 +86,7 @@ class Data(object):
                 helper.build_dataset(vocab, vocabulary_size=self.vocabulary_size)
         else:
             self.word_dict, self.embedding_matrix = \
-                self.reader.test_load_pretrained_embeddings(
+                self.reader.load_pretrained_embeddings(
                     self.pre_trained_matrix,
                     self.embedding_size)
         users = " ".join(self.train_labels).split()

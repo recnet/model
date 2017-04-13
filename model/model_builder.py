@@ -46,19 +46,19 @@ class ModelBuilder(object):
                            [None, self._model.max_title_length],
                            name="input")
         self._model.subreddit_input = \
-            tf.placeholder(tf.float64,
+            tf.placeholder(tf.float32,
                            [None, self._model.subreddit_count],
                            name="subreddit_input")
         self._model.target = \
-            tf.placeholder(tf.float64,
+            tf.placeholder(tf.float32,
                            [None, self._model.user_count],
                            name="target")
         self._model.sec_target = \
-            tf.placeholder(tf.float64,
+            tf.placeholder(tf.float32,
                            [None, self._model.data.subreddit_count],
                            name="sec_target")
 
-        self._model.keep_prob = tf.placeholder(tf.float64, name="keep_prob")
+        self._model.keep_prob = tf.placeholder(tf.float32, name="keep_prob")
 
         if self._model.rnn_unit == 'lstm':
             rnn_layer = tf.contrib.rnn.LSTMCell(self._model.rnn_neurons)
@@ -73,13 +73,13 @@ class ModelBuilder(object):
             tf.random_uniform(
                 [self._model.vocabulary_size,
                  self._model.embedding_size],
-                -1.0, 1.0, dtype=tf.float64),
+                -1.0, 1.0, dtype=tf.float32),
             trainable=self._model.is_trainable_matrix,
             name="embedding_matrix",
-            dtype=tf.float64)
+            dtype=tf.float32)
 
         self._model.embedding_placeholder = \
-            tf.placeholder(tf.float64,
+            tf.placeholder(tf.float32,
                            [self._model.vocabulary_size, self._model.embedding_size])
         self._model.embedding_init = \
             embedding_matrix.assign(self._model.embedding_placeholder)
@@ -88,7 +88,7 @@ class ModelBuilder(object):
                                                 self._model.input)
         # Run the LSTM layer with the embedded input
         outputs, _ = tf.nn.dynamic_rnn(rnn_layer, embedded_input,
-                                       dtype=tf.float64)
+                                       dtype=tf.float32)
 
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
@@ -98,13 +98,13 @@ class ModelBuilder(object):
                     [self._model.subreddit_count,
                      self._model.subreddit_input_neurons],
                     stddev=0.35,
-                    dtype=tf.float64),
+                    dtype=tf.float32),
                 name="sub_input_weights")
 
             subreddit_bias = tf.Variable(tf.random_normal(
                     [self._model.subreddit_input_neurons],
                     stddev=0.35,
-                    dtype=tf.float64),
+                    dtype=tf.float32),
                 name="sub_input_bias")
 
             logit_subreddit = tf.add(
@@ -128,22 +128,22 @@ class ModelBuilder(object):
                   else 0),
                  number_of_neurons],
                 stddev=0.35,
-                dtype=tf.float64),
+                dtype=tf.float32),
                                   name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
                                                 stddev=0.35,
-                                                dtype=tf.float64),
+                                                dtype=tf.float32),
                                name="biases" + str(self.number_of_layers))
 
         else:
             weights = tf.Variable(tf.random_normal(
                 [self._model.latest_layer.get_shape()[1].value, number_of_neurons],
                 stddev=0.35,
-                dtype=tf.float64),
+                dtype=tf.float32),
                                   name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
                                                 stddev=0.35,
-                                                dtype=tf.float64),
+                                                dtype=tf.float32),
                                name="biases" + str(self.number_of_layers))
 
         logits = tf.add(tf.matmul(self._model.latest_layer, weights), bias)
@@ -169,12 +169,12 @@ class ModelBuilder(object):
         sigmoid_weights = tf.Variable(tf.random_normal(
             [self._model.latest_layer.get_shape()[1].value, output_size],
             stddev=0.35,
-            dtype=tf.float64),
+            dtype=tf.float32),
                                       name="output_weights")
 
         sigmoid_bias = tf.Variable(tf.random_normal([output_size],
                                                     stddev=0.35,
-                                                    dtype=tf.float64),
+                                                    dtype=tf.float32),
                                    name="output_biases")
 
         logits = tf.add(tf.matmul(self._model.latest_layer, sigmoid_weights), sigmoid_bias)
