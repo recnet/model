@@ -41,6 +41,17 @@ header = """data:
 network\n"""
 
 def config_string(hyperparamaters):
+    hyperparamaters = list(hyperparamaters)
+    hyperparamaters[2] = int(hyperparamaters[2])
+    hyperparamaters[3] = int(hyperparamaters[3])
+    hyperparamaters[6] = int(hyperparamaters[6])
+    hyperparamaters[5] = int(hyperparamaters[5])
+    hyperparamaters[14] = int(hyperparamaters[14])
+    hyperparamaters[13] = int(hyperparamaters[13])
+    hyperparamaters[7] = int(hyperparamaters[7])
+    hyperparamaters[10] = int(hyperparamaters[10])
+    hyperparamaters[9] = int(hyperparamaters[9])
+    hyperparamaters[11] = int(hyperparamaters[11])
     return template.format(*hyperparamaters)
 
 def many_configs(data,rows_to_select):
