@@ -35,8 +35,10 @@ class Data(object):
         self._current_train_index = 0
         self._current_valid_index = 0
         self._current_test_index = 0
+        self._current_pre_train_index = 0
         self.completed_training_epochs = 0
         self.percent_of_epoch = 0.0
+        self.subreddit_count = 0
         self.title_length = networkconfig['max_title_length']
         self.batch_size = self.netcfg['batch_size']
         self.reader = CsvReader(networkconfig)
@@ -56,6 +58,7 @@ class Data(object):
 
     def _read_data(self):
         """ Reads all the data from specified path """
+
         logging.debug("Reading training data...")
 
         self.train_data, self.train_subreddits, self.train_labels = \
@@ -83,7 +86,7 @@ class Data(object):
                 helper.build_dataset(vocab, vocabulary_size=self.vocabulary_size)
         else:
             self.word_dict, self.embedding_matrix = \
-                self.reader.test_load_pretrained_embeddings(
+                self.reader.load_pretrained_embeddings(
                     self.pre_trained_matrix,
                     self.embedding_size)
         users = " ".join(self.train_labels).split()
@@ -92,6 +95,7 @@ class Data(object):
 
         subreddits = " ".join(self.train_subreddits).split()
         self.subreddit_dict = helper.build_subreddit_dict(subreddits)
+        self.subreddit_count = len(self.subreddit_dict)
 
     def next_train_batch(self, batch_size=None):
         """ Get the next batch of training data """
@@ -119,8 +123,9 @@ class Data(object):
             self.train_present += present
             self.train_absent += absent
 
-            subreddit_vec = helper.subreddit_index(subreddit,
-                                                   self.subreddit_dict)
+            subreddit_vec = helper.label_vector(subreddit,
+                                                self.subreddit_dict,
+                                                self.subreddit_count)
 
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)
@@ -129,6 +134,40 @@ class Data(object):
             batch_y.append(label_vec)
 
         self.percent_of_epoch = self._current_train_index / self.train_size
+        return batch_x, batch_sub, batch_y
+
+    def next_pre_train_batch(self, batch_size=None):
+        """ Get the next batch of training data """
+        batch_size = batch_size or self.batch_size
+        batch_x = []
+        batch_y = []
+        batch_sub = []
+
+        for _ in range(0, batch_size):
+            sentence = self.train_data[self._current_pre_train_index]
+            subreddit = self.train_subreddits[self._current_pre_train_index]
+            label = self.train_labels[self._current_pre_train_index]
+            self._current_pre_train_index += 1
+            # Support multiple epochs
+            if self._current_pre_train_index >= self.train_size:
+                self._current_pre_train_index = 0
+
+            # Turn sentences and labels into vector representations
+            sentence_vec, present, absent = \
+                helper.get_indicies(sentence,
+                                    self.word_dict,
+                                    self.max_title_length)
+            self.train_present += present
+            self.train_absent += absent
+
+            subreddit_vec = helper.label_vector(subreddit,
+                                                self.subreddit_dict,
+                                                self.subreddit_count)
+            batch_x.append(sentence_vec)
+            batch_y.append(subreddit_vec)
+            batch_sub.append(subreddit_vec)
+
+
         return batch_x, batch_sub, batch_y
 
     def get_validation(self):
@@ -165,8 +204,9 @@ class Data(object):
             self.valid_present += pres
             self.valid_absent += absent
 
-            subreddit_vec = helper.subreddit_index(subreddit,
-                                                   self.subreddit_dict)
+            subreddit_vec = helper.label_vector(subreddit,
+                                                self.subreddit_dict,
+                                                self.subreddit_count)
 
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)
@@ -205,8 +245,9 @@ class Data(object):
                                                self.word_dict,
                                                self.max_title_length)
 
-            subreddit_vec = helper.subreddit_index(subreddit,
-                                                   self.subreddit_dict)
+            subreddit_vec = helper.label_vector(subreddit,
+                                                self.subreddit_dict,
+                                                self.subreddit_count)
 
             label_vec = helper.label_vector(label.split(), self.users_dict,
                                             self.user_count)
@@ -218,7 +259,7 @@ class Data(object):
     def for_n_train_epochs(self, num_epochs=1, batch_size=25):
         # TODO Ta bort parameterar
         """ Calculates how many training iterations to do for num_epochs
-        number of epochs with a batch size of batch_size """
+        number of epochs with a batch size of batch_size"""
         return range((self.train_size * num_epochs) // batch_size)
 
     def get_training(self):

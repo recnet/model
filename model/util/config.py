@@ -29,6 +29,6 @@ with open("./config.yaml", 'r') as ymlfile:
     for conf in cfg['network']:
         for (key, value) in conf.items():
             if type(value) is float:
-                conf[key] = np.float64(value)
+                conf[key] = np.float32(value)
 
 

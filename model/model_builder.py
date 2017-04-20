@@ -24,6 +24,7 @@
 
 import tensorflow as tf
 from model.model import Model
+from definitions import *
 
 class ModelBuilder(object):
     """A class following the builder pattern to create a model"""
@@ -45,30 +46,40 @@ class ModelBuilder(object):
                            [None, self._model.max_title_length],
                            name="input")
         self._model.subreddit_input = \
-            tf.placeholder(tf.float64,
-                           [None, 1],
+            tf.placeholder(tf.float32,
+                           [None, self._model.subreddit_count],
                            name="subreddit_input")
         self._model.target = \
-            tf.placeholder(tf.float64,
+            tf.placeholder(tf.float32,
                            [None, self._model.user_count],
                            name="target")
+        self._model.sec_target = \
+            tf.placeholder(tf.float32,
+                           [None, self._model.data.subreddit_count],
+                           name="sec_target")
 
-        self._model.keep_prob = tf.placeholder(tf.float64, name="keep_prob")
+        self._model.keep_prob = tf.placeholder(tf.float32, name="keep_prob")
 
-        lstm_layer = tf.contrib.rnn.LSTMCell(self._model.lstm_neurons, state_is_tuple=True)
+        if self._model.rnn_unit == 'lstm':
+            rnn_layer = tf.contrib.rnn.LSTMCell(self._model.rnn_neurons)
+        elif self._model.rnn_unit == 'gru':
+            rnn_layer = tf.contrib.rnn.GRUCell(self._model.rnn_neurons)
+        else:
+            print("Incorrect RNN unit, defaulting to LSTM")
+            rnn_layer = tf.contrib.rnn.LSTMCell(self._model.rnn_neurons)
 
         # Embedding matrix for the words
         embedding_matrix = tf.Variable(
-            tf.constant(0.0,
-                        shape=[self._model.vocabulary_size,
-                               self._model.embedding_size],
-                        dtype=tf.float64),
+            tf.random_uniform(
+                [self._model.vocabulary_size,
+                 self._model.embedding_size],
+                -1.0, 1.0, dtype=tf.float32),
             trainable=self._model.is_trainable_matrix,
             name="embedding_matrix",
-            dtype=tf.float64)
+            dtype=tf.float32)
 
         self._model.embedding_placeholder = \
-            tf.placeholder(tf.float64,
+            tf.placeholder(tf.float32,
                            [self._model.vocabulary_size, self._model.embedding_size])
         self._model.embedding_init = \
             embedding_matrix.assign(self._model.embedding_placeholder)
@@ -76,14 +87,30 @@ class ModelBuilder(object):
         embedded_input = tf.nn.embedding_lookup(embedding_matrix,
                                                 self._model.input)
         # Run the LSTM layer with the embedded input
-        outputs, _ = tf.nn.dynamic_rnn(lstm_layer, embedded_input,
-                                       dtype=tf.float64)
+        outputs, _ = tf.nn.dynamic_rnn(rnn_layer, embedded_input,
+                                       dtype=tf.float32)
 
         outputs = tf.transpose(outputs, [1, 0, 2])
         output = outputs[-1]
         if self._model.use_concat_input:
             # Add subreddit to end of input
-            output = tf.concat([output, self._model.subreddit_input], 1)
+            subreddit_weights = tf.Variable(tf.random_normal(
+                    [self._model.subreddit_count,
+                     self._model.subreddit_input_neurons],
+                    stddev=0.35,
+                    dtype=tf.float32),
+                name="sub_input_weights")
+
+            subreddit_bias = tf.Variable(tf.random_normal(
+                    [self._model.subreddit_input_neurons],
+                    stddev=0.35,
+                    dtype=tf.float32),
+                name="sub_input_bias")
+
+            logit_subreddit = tf.add(
+                tf.matmul(self._model.subreddit_input, subreddit_weights),
+                subreddit_bias)
+            output = tf.concat([output, logit_subreddit], 1)
 
         self._model.latest_layer = output
 
@@ -95,26 +122,28 @@ class ModelBuilder(object):
         if not self.added_layers:
             self.added_layers = True
             weights = tf.Variable(tf.random_normal(
-                [self._model.lstm_neurons +
-                 (1 if self._model.use_concat_input else 0),
+                [self._model.rnn_neurons +
+                 (self._model.subreddit_input_neurons
+                  if self._model.use_concat_input
+                  else 0),
                  number_of_neurons],
                 stddev=0.35,
-                dtype=tf.float64),
+                dtype=tf.float32),
                                   name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
                                                 stddev=0.35,
-                                                dtype=tf.float64),
+                                                dtype=tf.float32),
                                name="biases" + str(self.number_of_layers))
 
         else:
             weights = tf.Variable(tf.random_normal(
                 [self._model.latest_layer.get_shape()[1].value, number_of_neurons],
                 stddev=0.35,
-                dtype=tf.float64),
+                dtype=tf.float32),
                                   name="weights" + str(self.number_of_layers))
             bias = tf.Variable(tf.random_normal([number_of_neurons],
                                                 stddev=0.35,
-                                                dtype=tf.float64),
+                                                dtype=tf.float32),
                                name="biases" + str(self.number_of_layers))
 
         logits = tf.add(tf.matmul(self._model.latest_layer, weights), bias)
@@ -122,9 +151,7 @@ class ModelBuilder(object):
             logits, name="hidden_layer-" + str(self.number_of_layers))
 
         if self._model.use_l2_loss:
-            self._model.l2_term = tf.add(
-                tf.add(self._model.l2_term, tf.nn.l2_loss(weights)),
-                tf.nn.l2_loss(bias))
+            self._model.l2_term = tf.add(self._model.l2_term, tf.nn.l2_loss(weights))
         if self._model.use_dropout:
             self._model.latest_layer = \
                 tf.nn.dropout(self._model.latest_layer,
@@ -133,31 +160,37 @@ class ModelBuilder(object):
 
         return self
 
-    def add_output_layer(self):
+    def add_output_layer(self, output_size, secondary_output=False):
         """Adds an output layer, including error and optimisation functions.
            After this method no new layers should be added."""
 
         # Output layer
         # Feed the output of the previous layer to a sigmoid layer
         sigmoid_weights = tf.Variable(tf.random_normal(
-            [self._model.latest_layer.get_shape()[1].value, self._model.user_count],
+            [self._model.latest_layer.get_shape()[1].value, output_size],
             stddev=0.35,
-            dtype=tf.float64),
+            dtype=tf.float32),
                                       name="output_weights")
 
-        sigmoid_bias = tf.Variable(tf.random_normal([self._model.user_count],
+        sigmoid_bias = tf.Variable(tf.random_normal([output_size],
                                                     stddev=0.35,
-                                                    dtype=tf.float64),
+                                                    dtype=tf.float32),
                                    name="output_biases")
 
         logits = tf.add(tf.matmul(self._model.latest_layer, sigmoid_weights), sigmoid_bias)
-        self._model.sigmoid = tf.nn.sigmoid(logits)
+
+        if secondary_output:
+            error = tf.nn.softmax_cross_entropy_with_logits(
+                labels=self._model.sec_target,
+                logits=logits)
+        else:
+            self._model.sigmoid = tf.nn.sigmoid(logits)
+            # Defne error function
+            error = tf.nn.sigmoid_cross_entropy_with_logits(
+                labels=self._model.target,
+                logits=logits)
 
         # Training
-
-        # Defne error function
-        error = tf.nn.sigmoid_cross_entropy_with_logits(labels=self._model.target,
-                                                        logits=logits)
 
         if self._model.use_l2_loss:
             cross_entropy = \
@@ -172,9 +205,13 @@ class ModelBuilder(object):
         else:
             cross_entropy = tf.reduce_mean(error)
 
-        self._model.error = cross_entropy
-        self._model.train_op = tf.train.AdamOptimizer(
-            self._model.learning_rate).minimize(cross_entropy)
+        if secondary_output:
+            self._model.pre_train_op = tf.train.AdamOptimizer(
+                self._model.learning_rate).minimize(cross_entropy)
+        else:
+            self._model.error = cross_entropy
+            self._model.train_op = tf.train.AdamOptimizer(
+                self._model.learning_rate).minimize(cross_entropy)
 
         return self
 
@@ -267,15 +304,28 @@ class ModelBuilder(object):
 
     def build(self):
         """Adds saver and init operation and returns the model"""
+
+        # Add input layer
         self.add_input_layer()
 
         # Add a number of hidden layers
         for _ in range(self._model.hidden_layers):
             self.add_layer(self._model.hidden_neurons)
 
-        self.add_output_layer()
+        # Add output layer for pretraining, if used
+        if self._model.use_pretrained_net:
+            self.add_output_layer(self._model.subreddit_count, secondary_output=True)
 
-        self.add_precision_operations()
+        # Add output layer for users
+        self.add_output_layer(self._model.user_count) \
+            .add_precision_operations()
+
+        # Initialize
+        self._model.train_writer = \
+            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_TRAIN,
+                                  self._model._session.graph)
+        self._model.valid_writer = \
+            tf.summary.FileWriter(self._model.logging_dir + '/' + TENSOR_DIR_VALID)
 
         self._model.init_op = tf.group(tf.global_variables_initializer(),
                                        tf.local_variables_initializer())

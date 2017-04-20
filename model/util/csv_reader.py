@@ -35,7 +35,6 @@ class Dataenum(Enum):
     TRAINING = "training_data"
     VALIDATION = "validation_data"
 
-
 class CsvReader:
     def __init__(self, netcfg):
         self.netcfg = netcfg
@@ -75,33 +74,31 @@ class CsvReader:
                 subreddit_full.append(subreddit)
             return data_full, subreddit_full, label_full
 
+    def load_pretrained_embeddings(self, file_name, dimension_size=50):
+        file_path = os.path.join(DATASETS_PATH, file_name)
+        matrix = [np.random.rand(dimension_size).astype(np.float32)]
+        word_dict = dict()
+        word_dict['UNK'] = 0
+        count = 1
 
-    def test_load_pretrained_embeddings(self, fileName, dimension_size=50):
-        file_path = os.path.join(DATASETS_PATH, fileName)
         with open(file_path, 'r', encoding='UTF-8') as csvfile:
             reader = csv.reader(csvfile, delimiter=' ', quoting=csv.QUOTE_NONE)
-            word_dict = dict()
-            matrix = []
-
-            word_dict['UNK'] = len(matrix)
-            matrix.append(np.random.rand(1, dimension_size)[0].tolist())
 
             for row in reader:
                 first_col = row[0]
-
                 if first_col in ['!', '?', '-', '_', '.', ',', '\'', '\"', ':', ';', '%', '(', ')']:
                     continue
 
-                if first_col[0] == '<': #some words are tokens for usernames like <user> or <caps> etc, ignore them.
+                # Some words are tokens for usernames like <user> or
+                # <caps> etc, ignore them.
+                if first_col[0] == '<':
                     continue
-                word_dict[first_col] = len(matrix)
-                matrix.append(row[1:])
-        embed_matrix = np.array(matrix)
-        embed_matrix = embed_matrix.astype(np.float64)
-        return word_dict, embed_matrix
 
-
-
+                word_dict[first_col] = count
+                row_array = np.array(row[1:], dtype=np.float32)
+                matrix.append(row_array)
+                count += 1
+        return word_dict, np.array(matrix)
 
 
 

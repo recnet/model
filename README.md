@@ -26,3 +26,8 @@ For more details, take a look at the [dataset repository](https://github.com/kan
 ## Configuration
 To edit configs, take a look at the `config.yaml` file. Please prefer making new configs instead of editing old (for academic purposes). If implementing a new model, make sure to add support for it in the `main.py` file so its configs can be automatically parsed.
 
+## Build/Run with Docker
+
+Build with ```docker build -t YOURTAG .```
+
+Run with ```nvidia-docker run [-v YOURLOGDIR:/app/logs] -t -rm YOURTAG python -u ./YOURENTRYPOINT.py
