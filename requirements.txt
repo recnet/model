@@ -2,3 +2,4 @@ tensorflow
 numpy
 nose
 pyyaml==3.12
+names
