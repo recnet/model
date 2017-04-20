@@ -1,4 +1,5 @@
 from random import choice
+import names
 from datetime import datetime
 
 template = """  - type: {0}
@@ -39,10 +40,10 @@ def rtype():
     return "model-builder"
 
 def name():
-    name = "network-" + str(datetime.now()) + "-"
+    name = "network-"
     x = 0
     while True:
-        yield name + str(x)
+        yield name + names.get_first_name() + names.get_last_name() + "-" + str(x)
         x+=1
 
 def vocabulary_size():
