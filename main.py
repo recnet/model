@@ -25,6 +25,7 @@ import sys
 import argparse
 import tensorflow as tf
 from definitions import *
+from application import Application
 from model.util.networkconfig import yamlconfig as networkconfig
 from model.model_builder import ModelBuilder
 
@@ -34,24 +35,36 @@ def main():
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument('configs', metavar='C', type=int, nargs='*',
                         help='Config number to use (can be multiple)')
+    parser.add_argument('--application', action='store_true')
     args = parser.parse_args()
-    for conf in args.configs if args.configs else range(len(networkconfig)):
-        try:
-            print("Starting config ", conf)
-            config_file = networkconfig[conf]
-            with tf.Session() as sess:
-                builder = ModelBuilder(config_file, sess)
+    if args.application:
+        conf_num = args.configs[0] if args.configs else 0
+        serve_application(conf_num)
+    else:
+        for conf in args.configs if args.configs else range(len(networkconfig)):
+            try:
+                print("Starting config ", conf)
+                config_file = networkconfig[conf]
+                with tf.Session() as sess:
+                    builder = ModelBuilder(config_file, sess)
 
-                network_model = builder.build()
-                if config_file[USE_PRETRAINED_NET]:
-                    network_model.train(USE_PRETRAINED_NET)
-                network_model.train()
-                network_model.close_writers()
-            tf.reset_default_graph()
-        except Exception as e:
-            print("Config ", networkconfig[conf]["name"], "failed to complete", file=sys.stderr)
-            print(e, file=sys.stderr)
-            tf.reset_default_graph()
+                    network_model = builder.build()
+                    if config_file[USE_PRETRAINED_NET]:
+                        network_model.train(USE_PRETRAINED_NET)
+                    network_model.train()
+                    network_model.close_writers()
+                tf.reset_default_graph()
+            except Exception as e:
+                print("Config ", networkconfig[conf]["name"], "failed to complete", file=sys.stderr)
+                print(e, file=sys.stderr)
+                tf.reset_default_graph()
+
+def serve_application(config=0):
+    """ Serves a simple API for making predictions on a specified model """
+    config_file = networkconfig[config]
+    with tf.Session() as sess:
+        builder = ModelBuilder(config_file, sess)
+        Application(builder.build(), sess)
 
 if __name__ == "__main__":
     main()
