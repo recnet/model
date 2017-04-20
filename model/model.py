@@ -32,6 +32,7 @@ import os.path
 import tensorflow as tf
 from definitions import *
 from .util import data as data
+from .util import helper as helper
 from .util.folder_builder import build_structure
 from .util.writer import log_samefile
 from .util.helper import get_val_summary_tensor
@@ -89,6 +90,7 @@ class Model(object):
         self.embedding_init = None
         self.train_writer = None
         self.valid_writer = None
+        self.predictions = None
 
         # variables for tensorboard
         self.prec_sum_training = None
@@ -130,6 +132,23 @@ class Model(object):
         """ Saves the model to a file """
         path = path or self.checkpoints_dir
         self.saver.save(self._session, path)
+
+    def predict(self, title, subreddit='UNK'):
+        """ Make a prediction based on a title and a subreddit """
+        input_vec, _, _ = helper.get_indicies(title,
+                                              self.data.word_dict,
+                                              self.data.max_title_length)
+        subreddit_vec = helper.label_vector(subreddit,
+                                            self.data.subreddit_dict,
+                                            self.data.subreddit_count)
+        users = self._session.run(self.predictions,
+                                  {self.input: [input_vec],
+                                   self.subreddit_input: [subreddit_vec]})
+        result = []
+        for i, user in enumerate(users[0]):
+            if user:
+                result.append(self.data.rev_users_dict[i])
+        return result
 
     def validate(self):
         """ Validates the model and returns the final precision """
