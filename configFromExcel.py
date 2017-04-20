@@ -38,7 +38,7 @@ template = """  - type: {0}
 header = """data:
   path: 'resources/datasets/'
 
-network\n"""
+network:\n"""
 
 def config_string(hyperparamaters):
     hyperparamaters = list(hyperparamaters)
