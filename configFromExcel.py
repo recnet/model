@@ -1,4 +1,5 @@
 import sys
+import argparse
 import pandas
 
 template = """  - type: {0}
@@ -58,19 +59,14 @@ def many_configs(data,rows_to_select):
     configs = ( config_string(data.iloc(0)[row]) for row in rows_to_select )
     return "\n".join(configs)
 
+parser = argparse.ArgumentParser(description="Creates config from csv file from excel file")
+parser.add_argument("path",nargs=1,help="path to csv file")
+parser.add_argument("rows",metavar="rows",type=int,nargs='+',help="What rows to select from input file")
 
-if sys.argv[1] == "--help":
-    print("Give name of csv file as first argument and then what rows you want from that csv file")
-    print("If you want the first and fourth row from text.csv you write")
-    print("configFromExcel text.csv 0 3")
-    sys.exit(1)
+args = parser.parse_args()
 
-
-#give file as command line argumnet
-data = pandas.read_csv(sys.argv[1])
-
-# rest are the rows you want as configs, be more flexible later
-desired_rows = map(int,sys.argv[2:])
+data = pandas.read_csv(args.path[0])
+desired_rows = args.rows
 
 configs = many_configs(data,desired_rows)
 
@@ -78,5 +74,3 @@ filename = "config2.yaml"
 f = open(filename,"w")
 f.write(header + configs)
 f.close()
-
-
