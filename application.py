@@ -1,4 +1,5 @@
 from flask import Flask, Response, request
+from flask_cors import CORS
 import json
 
 class EndpointAction(object):
@@ -18,6 +19,7 @@ class Application(object):
         self.model = model
         self.session = session
         self.app = Flask('application')
+        CORS(self.app)
         self.app.add_url_rule('/predict',
                               'predict',
                               EndpointAction(self.make_prediction))
