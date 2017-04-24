@@ -207,8 +207,21 @@ class Model(object):
         if self.epoch.eval(self._session) == 0 and not use_pretrained_net:
             self.validate()
 
+        itr_for_n_epochs = \
+            self.data.for_n_train_epochs(self.training_epochs, self.batch_size)
+
+        itr_for_n_epochs_pretrain = \
+            self.data.for_n_train_epochs(min(self.training_epochs//10, 50),
+                                         self.batch_size)
+
+        epochs = \
+            itr_for_n_epochs_pretrain \
+            if use_pretrained_net \
+            else itr_for_n_epochs
+
+
         # Train for a specified amount of epochs
-        for i in self.data.for_n_train_epochs(self.training_epochs, self.batch_size):
+        for i in epochs:
             # Debug print out
             epoch = self.data.completed_training_epochs
 
