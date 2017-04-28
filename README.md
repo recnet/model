@@ -23,7 +23,7 @@ Where `<config id>` is the ID of the config for the trained model.
 
 The endpoint is then available at `localhost:5000/predict`. An example request is:
 ```
-HTTP GET localhost:5000/predict?text=Hello%20World&subreddit=funny!
+HTTP GET localhost:5000/predict?text=Hello%20World!&subreddit=funny
 ```
 Where users for the title `Hello World!` and subreddit `funny` are predicted. It's important that the title string is URL encoded (i.e. replacing `" "` with `"%20"`). The response looks like the following:
 ```json
