@@ -228,6 +228,8 @@ class ModelBuilder(object):
             prediction_func = lambda x: tf.greater_equal(
                 x, tf.reduce_mean(x))
 
+        prediction_func = lambda x: tf.greater_equal(
+            x, tf.reduce_max(x))
         # Convert all probibalistic predictions to discrete predictions
         self._model.predictions = \
             tf.map_fn(prediction_func, self._model.sigmoid, dtype=tf.bool)
