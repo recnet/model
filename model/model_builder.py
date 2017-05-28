@@ -155,7 +155,7 @@ class ModelBuilder(object):
         if self._model.use_dropout:
             self._model.latest_layer = \
                 tf.nn.dropout(self._model.latest_layer,
-                              self._model.dropout_prob,
+                              self._model.keep_prob,
                               name="hidden_layer" + str(self.number_of_layers) + "dropout")
 
         return self
@@ -241,11 +241,17 @@ class ModelBuilder(object):
         _, self._model.precision_training = \
             tf.metrics.precision(self._model.target,
                                  self._model.predictions)
+        _, self._model.precision_testing = \
+            tf.metrics.precision(self._model.target,
+                                 self._model.predictions)
         # Calculate recall
         _, self._model.recall_validation = \
             tf.metrics.recall(self._model.target,
                               self._model.predictions)
         _, self._model.recall_training = \
+            tf.metrics.recall(self._model.target,
+                              self._model.predictions)
+        _, self._model.recall_testing = \
             tf.metrics.recall(self._model.target,
                               self._model.predictions)
 
@@ -274,6 +280,19 @@ class ModelBuilder(object):
                      tf.zeros_like(self._model.f1_score_training),
                      self._model.f1_score_training)
 
+
+        self._model.f1_score_testing = \
+            tf.multiply(2.0,
+                        tf.truediv(tf.multiply(self._model.precision_testing,
+                                               self._model.recall_testing),
+                                   tf.add(self._model.precision_testing,
+                                          self._model.recall_testing)))
+        # Convert to 0 if f1 score is NaN
+        self._model.f1_score_testing = \
+            tf.where(tf.is_nan(self._model.f1_score_testing),
+                     tf.zeros_like(self._model.f1_score_testing),
+                     self._model.f1_score_testing)
+
         self._model.error_sum = \
             tf.summary.scalar('cross_entropy', self._model.error)
 
@@ -285,6 +304,9 @@ class ModelBuilder(object):
         self._model.prec_sum_training = \
             tf.summary.scalar('precision_training',
                               self._model.precision_training)
+        self._model.prec_sum_testing = \
+            tf.summary.scalar('precision_testing',
+                              self._model.precision_testing)
 
         self._model.recall_sum_validation = \
             tf.summary.scalar('recall_validation',
@@ -292,6 +314,9 @@ class ModelBuilder(object):
         self._model.recall_sum_training = \
             tf.summary.scalar('recall_training',
                               self._model.recall_training)
+        self._model.recall_sum_testing = \
+            tf.summary.scalar('recall_testing',
+                              self._model.recall_testing)
 
         self._model.f1_sum_validation = \
             tf.summary.scalar('f1_score_validation',
@@ -299,6 +324,9 @@ class ModelBuilder(object):
         self._model.f1_sum_training = \
             tf.summary.scalar('f1_score_training',
                               self._model.f1_score_training)
+        self._model.f1_sum_testing = \
+            tf.summary.scalar('f1_score_testing',
+                              self._model.f1_score_testing)
 
         return self
 

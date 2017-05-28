@@ -174,7 +174,7 @@ class Data(object):
         """ Get the whole validation set in a vectorized form """
         old_ind = self._current_valid_index
         self._current_valid_index = 0
-        batch_x, batch_sub, batch_y = self.next_valid_batch()
+        batch_x, batch_sub, batch_y = self.next_valid_batch(self.validation_size)
         self._current_valid_index = old_ind
         return batch_x, batch_sub, batch_y
 
@@ -224,7 +224,7 @@ class Data(object):
         return batch_x, batch_sub, batch_y
 
     def next_test_batch(self, batch_size=None):
-        """ Get the next batch of validation data """
+        """ Get the next batch of test data """
         batch_size = batch_size or self.batch_size
         batch_x = []
         batch_sub = []
@@ -241,9 +241,10 @@ class Data(object):
                 self._current_test_index = 0
 
             # Turn sentences and labels into vectors
-            sentence_vec = helper.get_indicies(sentence,
-                                               self.word_dict,
-                                               self.max_title_length)
+            sentence_vec, pres, absent = \
+                helper.get_indicies(sentence,
+                                    self.word_dict,
+                                    self.max_title_length)
 
             subreddit_vec = helper.label_vector(subreddit,
                                                 self.subreddit_dict,

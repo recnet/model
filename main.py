@@ -36,6 +36,7 @@ def main():
     parser.add_argument('configs', metavar='C', type=int, nargs='*',
                         help='Config number to use (can be multiple)')
     parser.add_argument('--application', action='store_true')
+    parser.add_argument('--testing', action='store_true')
     args = parser.parse_args()
     if args.application:
         conf_num = args.configs[0] if args.configs else 0
@@ -49,9 +50,12 @@ def main():
                     builder = ModelBuilder(config_file, sess)
 
                     network_model = builder.build()
-                    if config_file[USE_PRETRAINED_NET]:
+                    if config_file[USE_PRETRAINED_NET] and not args.testing:
                         network_model.train(USE_PRETRAINED_NET)
-                    network_model.train()
+                    if args.testing:
+                        network_model.test()
+                    else:
+                        network_model.train()
                     network_model.close_writers()
                 tf.reset_default_graph()
             except Exception as e:

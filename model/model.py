@@ -101,6 +101,9 @@ class Model(object):
         self.error_sum = None
         self.recall_sum_validation = None
         self.f1_sum_validation = None
+        self.prec_sum_testing = None
+        self.recall_sum_testing = None
+        self.f1_sum_testing = None
 
         self.logging_dir = build_structure(config)
         self.checkpoints_dir = self.logging_dir + '/' + CHECKPOINTS_DIR + '/' + "models.ckpt"
@@ -149,6 +152,27 @@ class Model(object):
             if user:
                 result.append(self.data.rev_users_dict[i])
         return result
+
+    def test(self):
+        """ Tests the model using the testing set """
+        print("Starting testing...")
+
+        test_data, test_sub, test_labels = self.data.get_testing()
+        test_prec, test_err, test_recall, test_f1 = \
+            self._session.run([self.prec_sum_testing,
+                               self.error_sum,
+                               self.recall_sum_testing,
+                               self.f1_sum_testing],
+                              {self.input: test_data,
+                               self.subreddit_input: test_sub,
+                               self.target: test_labels,
+                               self.keep_prob: 1.0})
+
+
+        print("Testing Precision: ", get_val_summary_tensor(test_prec))
+        print("Testing Recall: ", get_val_summary_tensor(test_recall))
+        print("Testing F1: ", get_val_summary_tensor(test_f1))
+        print("Testing Error: ", get_val_summary_tensor(test_err))
 
     def validate(self):
         """ Validates the model and returns the final precision """
@@ -283,16 +307,19 @@ class Model(object):
             self._session.run(self.pre_train_op,
                               {self.input: batch_input,
                                self.subreddit_input: batch_sub,
-                               self.sec_target: batch_label})
+                               self.sec_target: batch_label,
+                               self.keep_prob: self.dropout_prob})
         elif pre_train_net:
             self._session.run(self.pre_train_op,
                               {self.input: batch_input,
-                               self.sec_target: batch_label})
+                               self.sec_target: batch_label,
+                               self.keep_prob: self.dropout_prob})
         else:
             self._session.run(self.train_op,
                               {self.input: batch_input,
                                self.subreddit_input: batch_sub,
-                               self.target: batch_label})
+                               self.target: batch_label,
+                               self.keep_prob: self.dropout_prob})
 
     def close_writers(self):
         """ Close tensorboard writers """
