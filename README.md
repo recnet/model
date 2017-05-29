@@ -14,6 +14,17 @@ Examples are:
 > python main.py 1 2 4
 ```
 
+## Testing
+After modeling is complete, testing can be performed on the specified testing dataset. To test a model given specific configurations, do:
+```
+> python main.py <config ids> --testing
+```
+To test all configurations, simply run:
+```
+> python main.py --testing
+```
+For testing to be successful, an existing (and trained) model should exist in the `logs` directory with the same name as in the configuration file for the given configuration id.
+
 ## Application Endpoint
 There is a simple RESTful endpoint that can be used to make predictions on a specified title. To use the endpoint the model has to be trained alreay. Once the network is trained and ready to make some predictions, run
 ```
