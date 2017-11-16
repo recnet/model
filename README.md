@@ -1,6 +1,8 @@
 # ANN Model
 Requires Python 3.x.x+
 
+This model was created as part of a [Bachelor's thesis](http://publications.lib.chalmers.se/records/fulltext/251698/251698.pdf) at Chalmers University of Technology.
+
 ## Usage
 To run a certain config, do:
 ``` bash
